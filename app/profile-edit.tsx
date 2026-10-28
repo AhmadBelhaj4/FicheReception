@@ -2,23 +2,23 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from 'heroui-native';
+
 import { useProjectStore } from '../src/store/useProjectStore';
 import {
   calculateCotePratique,
   calculateDifference,
 } from '../src/utils/calculations';
 
-// Robust decimal input handling without losing trailing decimal points
+// ─── NumInput ────────────────────────────────────────────────────────────────
+// Robust decimal input: retains trailing dots, handles commas, commits on blur.
+// Uses raw TextInput (not HeroUI Input) to keep exact event-handling logic.
 function NumInput({
   label,
   value,
@@ -79,61 +79,75 @@ function NumInput({
   };
 
   return (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
+    <View className="mb-2.5">
+      <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+        {label}
+      </Text>
       <TextInput
-        style={styles.input}
+        className="bg-slate-700 border border-slate-600 rounded-xl px-3 text-slate-50 text-base"
+        style={{ height: 48 }}
         keyboardType="decimal-pad"
         value={text}
         onChangeText={handleChange}
         onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor="#64748b"
       />
     </View>
   );
 }
 
-// Result line with color coding for Remblai (Green) / Déblai (Red)
+// ─── ResultLine ───────────────────────────────────────────────────────────────
+// One row in the live calculations table.
 function ResultLine({
   label,
+  isAxe,
   lecture,
   cote,
   diff,
 }: {
   label: string;
+  isAxe?: boolean;
   lecture: number | null;
   cote: number | null;
   diff: number | null;
 }) {
-  const diffColor =
-    diff === null
-      ? '#94a3b8'
-      : diff > 0
-      ? '#16a34a' // Remblai = Green
-      : diff < 0
-      ? '#dc2626' // Déblai = Red
-      : '#475569';
+  const isRemblai = diff !== null && diff > 0;
+  const isDeblai  = diff !== null && diff < 0;
+
+  const diffColor = diff === null
+    ? 'text-slate-600'
+    : isRemblai
+    ? 'text-emerald-400'
+    : isDeblai
+    ? 'text-red-400'
+    : 'text-slate-400';
+
+  const rowBg = isAxe ? 'bg-slate-700' : 'bg-transparent';
+  const labelStyle = isAxe
+    ? 'text-amber-400 font-black text-xs'
+    : 'text-slate-300 font-bold text-xs';
 
   return (
-    <View style={styles.resultRow}>
-      <Text style={[styles.resultCell, styles.pointCell]}>{label}</Text>
-      <Text style={styles.resultCell}>
-        {lecture !== null ? lecture.toFixed(3) : '-'}
+    <View className={`flex-row py-2.5 px-3 border-b border-slate-700 ${rowBg}`}>
+      <Text className={`${labelStyle} flex-1 text-center`}>{label}</Text>
+      <Text className="text-slate-300 text-xs text-center flex-1">
+        {lecture !== null ? lecture.toFixed(3) : '–'}
       </Text>
-      <Text style={styles.resultCell}>
-        {cote !== null ? cote.toFixed(3) : '-'}
+      <Text className="text-slate-300 text-xs text-center flex-1">
+        {cote !== null ? cote.toFixed(3) : '–'}
       </Text>
-      <Text style={[styles.resultCell, { color: diffColor, fontWeight: '700' }]}>
+      <Text className={`${diffColor} text-xs text-center flex-1 font-bold`}>
         {diff !== null
           ? (diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3))
-          : '-'}
+          : '–'}
       </Text>
     </View>
   );
 }
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ProfileEditScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -144,412 +158,231 @@ export default function ProfileEditScreen() {
 
   if (!profile || pc === null) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a' }}>
+      <View className="flex-1 items-center justify-center px-6">
+        <Text className="text-red-400 text-base text-center font-semibold mb-6">
           Profil introuvable ou Plan de Comparaison (P.C.) non défini.
         </Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+        <Button variant="outline" size="lg" onPress={() => router.back()}>
+          <Button.Label className="font-bold">← Retour</Button.Label>
+        </Button>
+        </View>
+    </SafeAreaView>
     );
   }
 
-  // Calculate practical elevations live (Cote Pratique = PC - Lecture Avant)
-  const coteD2 =
-    profile.d2 !== null ? calculateCotePratique(pc, profile.d2) : null;
-  const coteD1 =
-    profile.d1 !== null ? calculateCotePratique(pc, profile.d1) : null;
-  const coteAxe =
-    profile.axe !== null ? calculateCotePratique(pc, profile.axe) : null;
-  const coteG1 =
-    profile.g1 !== null ? calculateCotePratique(pc, profile.g1) : null;
-  const coteG2 =
-    profile.g2 !== null ? calculateCotePratique(pc, profile.g2) : null;
+  // Live cote pratique calculations (Cote Pratique = PC – Lecture Avant)
+  const coteD2  = profile.d2  !== null ? calculateCotePratique(pc, profile.d2)  : null;
+  const coteD1  = profile.d1  !== null ? calculateCotePratique(pc, profile.d1)  : null;
+  const coteAxe = profile.axe !== null ? calculateCotePratique(pc, profile.axe) : null;
+  const coteG1  = profile.g1  !== null ? calculateCotePratique(pc, profile.g1)  : null;
+  const coteG2  = profile.g2  !== null ? calculateCotePratique(pc, profile.g2)  : null;
 
-  // Differences live (Différence = Cote Projet - Cote Pratique)
-  const diffD2 =
-    profile.coteProjet !== null && coteD2 !== null
-      ? calculateDifference(profile.coteProjet, coteD2)
-      : null;
-  const diffD1 =
-    profile.coteProjet !== null && coteD1 !== null
-      ? calculateDifference(profile.coteProjet, coteD1)
-      : null;
-  const diffAxe =
-    profile.coteProjet !== null && coteAxe !== null
-      ? calculateDifference(profile.coteProjet, coteAxe)
-      : null;
-  const diffG1 =
-    profile.coteProjet !== null && coteG1 !== null
-      ? calculateDifference(profile.coteProjet, coteG1)
-      : null;
-  const diffG2 =
-    profile.coteProjet !== null && coteG2 !== null
-      ? calculateDifference(profile.coteProjet, coteG2)
-      : null;
+  // Live differences (Différence = Cote Projet – Cote Pratique)
+  const diffD2  = profile.coteProjet !== null && coteD2  !== null ? calculateDifference(profile.coteProjet, coteD2)  : null;
+  const diffD1  = profile.coteProjet !== null && coteD1  !== null ? calculateDifference(profile.coteProjet, coteD1)  : null;
+  const diffAxe = profile.coteProjet !== null && coteAxe !== null ? calculateDifference(profile.coteProjet, coteAxe) : null;
+  const diffG1  = profile.coteProjet !== null && coteG1  !== null ? calculateDifference(profile.coteProjet, coteG1)  : null;
+  const diffG2  = profile.coteProjet !== null && coteG2  !== null ? calculateDifference(profile.coteProjet, coteG2)  : null;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'android' ? 25 : 0}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled">
-        {/* Header with Profile Sequence */}
-        <View style={styles.headerSection}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>PROFIL N° {profileIndex + 1}</Text>
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: '#0f172a' }}
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 180 }}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      extraScrollHeight={120}
+      extraHeight={120}
+      enableResetScrollToCoords={false}
+      keyboardOpeningTime={0}
+    >
+      {/* ── Header ── */}
+        <View className="items-center mb-5">
+          <View className="bg-amber-400 rounded-full px-5 py-1.5 mb-2">
+            <Text className="text-slate-900 text-xs font-black tracking-widest uppercase">
+              Profil N° {profileIndex + 1}
+            </Text>
           </View>
-          <Text style={styles.title}>Édition du Profil</Text>
-          <View style={styles.pcBadge}>
-            <Text style={styles.pcText}>P.C. Actuel : {pc.toFixed(3)} m</Text>
+          <Text className="text-2xl font-black text-slate-50 text-center">
+            Édition du Profil
+          </Text>
+          <View className="bg-slate-800 border border-amber-400/40 rounded-lg px-4 py-1.5 mt-2">
+            <Text className="text-amber-400 text-sm font-bold">
+              P.C. Actuel : {pc.toFixed(3)} m
+            </Text>
           </View>
         </View>
 
-        {/* Section 1: Lectures Avant */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>1. Lectures Avant (Mires en m)</Text>
-          <Text style={styles.sectionSubtitle}>
+        {/* ── Section 1: Lectures Avant ── */}
+        <View className="bg-slate-800 rounded-2xl p-4 mb-3 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-3">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              1. Lectures Avant (mires en m)
+            </Text>
+          </View>
+          <Text className="text-slate-500 text-xs mb-3">
             Ordre standard terrain : Droite (D2, D1), Axe, Gauche (G1, G2)
           </Text>
 
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 8 }}>
+          {/* D2, D1, Axe on one row */}
+          <View className="flex-row gap-2">
+            <View className="flex-1">
               <NumInput
-                label="D2 (EXT D)"
+                label="D2 (Ext D)"
                 value={profile.d2}
                 onChange={(v) => updateProfile(profile.id, { d2: v })}
               />
             </View>
-            <View style={{ flex: 1, marginRight: 8 }}>
+            <View className="flex-1">
               <NumInput
-                label="D1 (INT D)"
+                label="D1 (Int D)"
                 value={profile.d1}
                 onChange={(v) => updateProfile(profile.id, { d1: v })}
               />
             </View>
-            <View style={{ flex: 1 }}>
+            <View className="flex-1">
               <NumInput
-                label="AXE"
+                label="Axe"
                 value={profile.axe}
                 onChange={(v) => updateProfile(profile.id, { axe: v })}
               />
             </View>
           </View>
 
-          <View style={[styles.row, { marginTop: 8 }]}>
-            <View style={{ flex: 1, marginRight: 8 }}>
+          {/* G1, G2 on a second row */}
+          <View className="flex-row gap-2 mt-1">
+            <View className="flex-1">
               <NumInput
-                label="G1 (INT G)"
+                label="G1 (Int G)"
                 value={profile.g1}
                 onChange={(v) => updateProfile(profile.id, { g1: v })}
               />
             </View>
-            <View style={{ flex: 1 }}>
+            <View className="flex-1">
               <NumInput
-                label="G2 (EXT G)"
+                label="G2 (Ext G)"
                 value={profile.g2}
                 onChange={(v) => updateProfile(profile.id, { g2: v })}
               />
             </View>
+            {/* Spacer to keep symmetry */}
+            <View className="flex-1" />
           </View>
         </View>
 
-        {/* Section 2: Cote Projet */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>2. Cote Projet Théorique (m)</Text>
-          <Text style={styles.sectionSubtitle}>
-            {"Cote requise par les plans d'exécution du projet"}
+        {/* ── Section 2: Cote Projet ── */}
+        <View className="bg-slate-800 rounded-2xl p-4 mb-3 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-3">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              2. Cote Projet Théorique (m)
+            </Text>
+          </View>
+          <Text className="text-slate-500 text-xs mb-3">
+            {"Cote requise par les plans d\u2019exécution du projet"}
           </Text>
           <NumInput
-            label="COTE PROJET (Z.THÉO)"
+            label="Cote Projet (Z.Théo)"
             value={profile.coteProjet}
             onChange={(v) => updateProfile(profile.id, { coteProjet: v })}
-            placeholder="Ex: 15.250"
+            placeholder="Ex : 15.250"
           />
         </View>
 
-        {/* Section 3: Live Calculations Summary */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>3. Synthèse des Calculs</Text>
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.dot, { backgroundColor: '#16a34a' }]} />
-              <Text style={styles.legendText}>+ Remblai</Text>
+        {/* ── Section 3: Live Calculations Table ── */}
+        <View className="bg-slate-800 rounded-2xl mb-3 border border-slate-700 overflow-hidden">
+          {/* Table header */}
+          <View className="flex-row items-center gap-2 p-4 pb-2">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              3. Synthèse des Calculs
+            </Text>
+          </View>
+
+          {/* Legend */}
+          <View className="flex-row gap-4 px-4 pb-3">
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-2 h-2 rounded-full bg-emerald-400" />
+              <Text className="text-emerald-400 text-xs font-semibold">+ Remblai</Text>
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.dot, { backgroundColor: '#dc2626' }]} />
-              <Text style={styles.legendText}>- Déblai</Text>
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-2 h-2 rounded-full bg-red-400" />
+              <Text className="text-red-400 text-xs font-semibold">– Déblai</Text>
             </View>
           </View>
 
-          <View style={styles.resultsTable}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderCell, styles.pointCell]}>Point</Text>
-              <Text style={styles.tableHeaderCell}>Lec. AV</Text>
-              <Text style={styles.tableHeaderCell}>Cote Pr.</Text>
-              <Text style={styles.tableHeaderCell}>Différence</Text>
-            </View>
-            <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
-            <ResultLine label="D1" lecture={profile.d1} cote={coteD1} diff={diffD1} />
-            <ResultLine label="Axe" lecture={profile.axe} cote={coteAxe} diff={diffAxe} />
-            <ResultLine label="G1" lecture={profile.g1} cote={coteG1} diff={diffG1} />
-            <ResultLine label="G2" lecture={profile.g2} cote={coteG2} diff={diffG2} />
+          {/* Column header */}
+          <View className="flex-row bg-slate-900 py-2 px-3 border-y border-slate-700">
+            <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Point</Text>
+            <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Lec. AV</Text>
+            <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Cote Pr.</Text>
+            <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Diff.</Text>
           </View>
+
+          <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
+          <ResultLine label="D1" lecture={profile.d1} cote={coteD1} diff={diffD1} />
+          <ResultLine label="Axe" isAxe lecture={profile.axe} cote={coteAxe} diff={diffAxe} />
+          <ResultLine label="G1" lecture={profile.g1} cote={coteG1} diff={diffG1} />
+          <ResultLine label="G2" lecture={profile.g2} cote={coteG2} diff={diffG2} />
         </View>
 
-        {/* Section 4: Optional fields */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>4. Données Complémentaires</Text>
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 8 }}>
+        {/* ── Section 4: Données complémentaires ── */}
+        <View className="bg-slate-800 rounded-2xl p-4 mb-5 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-3">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              4. Données Complémentaires
+            </Text>
+          </View>
+
+          <View className="flex-row gap-2 mb-2">
+            <View className="flex-1">
               <NumInput
-                label="DÉVERS (%)"
+                label="Dévers (%)"
                 value={profile.devers}
                 onChange={(v) => updateProfile(profile.id, { devers: v })}
-                placeholder="Ex: 2.5"
+                placeholder="Ex : 2.5"
               />
             </View>
-            <View style={{ flex: 1 }}>
+            <View className="flex-1">
               <NumInput
-                label="DISTANCE (m)"
+                label="Distance (m)"
                 value={profile.distance}
                 onChange={(v) => updateProfile(profile.id, { distance: v })}
-                placeholder="Ex: 20.0"
+                placeholder="Ex : 20.0"
               />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>OBSERVATION / OBSTACLE</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              multiline
-              numberOfLines={2}
-              value={profile.observation}
-              onChangeText={(t) =>
-                updateProfile(profile.id, { observation: t })
-              }
-              placeholder="Ex: Regard pluvial, bordure cassée, poteau..."
-              placeholderTextColor="#999"
-              textAlignVertical="top"
-            />
-          </View>
+          <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1.5">
+            Observation / Obstacle
+          </Text>
+          <TextInput
+            className="bg-slate-700 border border-slate-600 rounded-xl px-3 text-slate-50 text-sm"
+            style={{ height: 64, paddingTop: 10 }}
+            multiline
+            numberOfLines={2}
+            value={profile.observation}
+            onChangeText={(t) => updateProfile(profile.id, { observation: t })}
+            placeholder="Ex : Regard pluvial, bordure cassée, poteau..."
+            placeholderTextColor="#64748b"
+            textAlignVertical="top"
+          />
         </View>
 
-        {/* Action Buttons */}
-        <TouchableOpacity
-          style={styles.saveButton}
-          activeOpacity={0.85}
-          onPress={() => router.back()}>
-          <Text style={styles.saveButtonText}>Enregistrer le Profil ✓</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        {/* ── Save button ── */}
+        <Button
+          variant="primary"
+          size="lg"
+          feedbackVariant="scale-ripple"
+          onPress={() => router.back()}
+        >
+          <Button.Label className="font-bold tracking-wide">
+            Enregistrer le Profil ✓
+          </Button.Label>
+        </Button>
+    </KeyboardAwareScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 16,
-    marginTop: 6,
-  },
-  badge: {
-    backgroundColor: '#1a365d',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 6,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#1a365d',
-  },
-  pcBadge: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  pcText: {
-    fontSize: 13,
-    color: '#1e40af',
-    fontWeight: '700',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1a365d',
-    marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 12,
-  },
-  inputGroup: {
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: 4,
-    color: '#475569',
-    textTransform: 'uppercase',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
-  },
-  textArea: {
-    height: 60,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-    gap: 16,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  legendText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  resultsTable: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderBottomWidth: 1,
-    borderBottomColor: '#cbd5e1',
-    paddingVertical: 8,
-  },
-  tableHeaderCell: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#334155',
-  },
-  resultRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  resultCell: {
-    flex: 1,
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#1e293b',
-  },
-  pointCell: {
-    fontWeight: '800',
-    color: '#1a365d',
-  },
-  saveButton: {
-    backgroundColor: '#1a365d',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 6,
-    shadowColor: '#1a365d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#f8fafc',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#dc2626',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontWeight: '600',
-  },
-  backButton: {
-    backgroundColor: '#e2e8f0',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#334155',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});

@@ -14,12 +14,6 @@ export default function TabLayout() {
           title: 'Fiche de Réception',
         }}
       />
-      <Tabs.Screen
-        name="two"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

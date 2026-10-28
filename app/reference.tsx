@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import {
-  View,
   Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter, Href } from 'expo-router';
+import { Button, Input, Label, TextField } from 'heroui-native';
+
 import { useProjectStore } from '../src/store/useProjectStore';
+import { StepBadge } from '../components/ui/StepBadge';
+import { ScreenHeader } from '../components/ui/ScreenHeader';
+import { FieldCard } from '../components/ui/FieldCard';
 
 export default function ReferenceScreen() {
   const router = useRouter();
@@ -69,228 +71,158 @@ export default function ReferenceScreen() {
     setReference({ lectureArriere: isNaN(parsed) ? null : parsed });
   };
 
+  const pcReady = pc !== null;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      keyboardShouldPersistTaps="handled">
-      {/* Step Badge & Header */}
-      <View style={styles.headerSection}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>ÉTAPE 2 / 4</Text>
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: '#0f172a' }}
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 160 }}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      extraScrollHeight={120}
+      extraHeight={120}
+      enableResetScrollToCoords={false}
+      keyboardOpeningTime={0}
+    >
+      {/* Step badge + heading */}
+      <StepBadge current={2} total={4} />
+      <ScreenHeader
+        title="Repère de Référence"
+        subtitle={"Définition du repère et calcul automatique du Plan de Comparaison (P.C.)"}
+      />
+
+      {/* ─── Benchmark inputs ─── */}
+      <FieldCard>
+        <View className="flex-row items-center gap-2 mb-4">
+          <View className="w-1 h-5 bg-amber-400 rounded-full" />
+          <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            Point de référence
+          </Text>
         </View>
-        <Text style={styles.title}>Repère de Référence</Text>
-        <Text style={styles.subtitle}>
-          Définition du repère et calcul automatique du Plan de Comparaison (P.C.)
+
+        {/* Repère */}
+        <TextField className="mb-4">
+          <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            Repère (borne ou point fixe)
+          </Label>
+          <Input
+            className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+            placeholder="Ex : TN 01, Borne A, Clou..."
+            placeholderTextColor="#64748b"
+            value={repere}
+            onChangeText={(t) => setReference({ repere: t })}
+            returnKeyType="next"
+          />
+        </TextField>
+
+        {/* ALT (Z) + LAR row */}
+        <View className="flex-row gap-3">
+          <TextField className="flex-1">
+            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              Altitude Z (m)
+            </Label>
+            <Input
+              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+              keyboardType="decimal-pad"
+              placeholder="16.530"
+              placeholderTextColor="#64748b"
+              value={altText}
+              onChangeText={handleAltChange}
+            />
+          </TextField>
+
+          <TextField className="flex-1">
+            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              Lect. Arrière (m)
+            </Label>
+            <Input
+              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+              keyboardType="decimal-pad"
+              placeholder="1.310"
+              placeholderTextColor="#64748b"
+              value={lecText}
+              onChangeText={handleLecChange}
+            />
+          </TextField>
+        </View>
+      </FieldCard>
+
+      {/* ─── P.C. result card ─── */}
+      <View
+        className={[
+          'rounded-2xl p-5 mb-5 border items-center',
+          pcReady
+            ? 'bg-slate-800 border-amber-400'
+            : 'bg-slate-800 border-slate-700',
+        ].join(' ')}
+      >
+        {/* Formula label */}
+        <View className="flex-row items-center gap-2 mb-3">
+          <View
+            className={['w-1 h-5 rounded-full', pcReady ? 'bg-amber-400' : 'bg-slate-600'].join(' ')}
+          />
+          <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            Plan de Comparaison
+          </Text>
+        </View>
+
+        {/* Formula */}
+        <Text className="text-slate-500 text-xs font-semibold tracking-wider mb-2 uppercase">
+          P.C. = ALT (Z) + LAR
+        </Text>
+
+        {/* Big value */}
+        <Text
+          className={[
+            'font-black text-5xl tracking-tight',
+            pcReady ? 'text-amber-400' : 'text-slate-600',
+          ].join(' ')}
+        >
+          {pcReady ? `${pc!.toFixed(3)}` : '---'}
+        </Text>
+        {pcReady && (
+          <Text className="text-amber-500 text-xs font-semibold mt-1">mètres NGT</Text>
+        )}
+
+        {/* Helper text */}
+        <Text
+          className={[
+            'text-xs text-center mt-3 px-4',
+            pcReady ? 'text-slate-400' : 'text-slate-600',
+          ].join(' ')}
+        >
+          {pcReady
+            ? 'Calculé automatiquement · utilisé pour tous les profils'
+            : 'Renseignez ALT (Z) et Lecture Arrière pour calculer le P.C.'}
         </Text>
       </View>
 
-      <View style={styles.card}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>REPÈRE (BORNE OU POINT FIXE)</Text>
-          <TextInput
-            style={styles.input}
-            value={repere}
-            onChangeText={(t) => setReference({ repere: t })}
-            placeholder="Ex: TN 01, Borne A, Clou..."
-            placeholderTextColor="#999"
-          />
-        </View>
+      {/* ─── Button row ─── */}
+      <View className="flex-row gap-3">
+        <Button
+          variant="outline"
+          size="lg"
+          onPress={() => router.back()}
+          className="flex-none px-5"
+        >
+          <Button.Label className="font-bold">← Retour</Button.Label>
+        </Button>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>ALTITUDE (Z) EN MÈTRES</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="decimal-pad"
-            value={altText}
-            onChangeText={handleAltChange}
-            placeholder="Ex: 16.530"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>LECTURE ARRIÈRE (LAR) EN MÈTRES</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="decimal-pad"
-            value={lecText}
-            onChangeText={handleLecChange}
-            placeholder="Ex: 1.310"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        {/* Calculated PC Box */}
-        <View style={styles.calculatedBox}>
-          <Text style={styles.calculatedLabel}>
-            PLAN DE COMPARAISON (P.C. = ALT + LAR)
-          </Text>
-          <Text style={styles.calculatedValue}>
-            {pc !== null ? `${pc.toFixed(3)} m` : '---'}
-          </Text>
-          <Text style={styles.calculatedHelper}>
-            {pc !== null
-              ? 'Calculé automatiquement et utilisé pour tous les profils'
-              : 'Renseignez ALT (Z) et Lecture Arrière pour calculer le P.C.'}
-          </Text>
-        </View>
+        <Button
+          variant="primary"
+          size="lg"
+          feedbackVariant="scale-ripple"
+          isDisabled={!pcReady}
+          onPress={() => router.push('/profiles' as Href)}
+          className="flex-1"
+        >
+          <Button.Label className="font-bold tracking-wide">
+            Suivant : Profils
+          </Button.Label>
+          <Text className="text-white text-lg ml-1">→</Text>
+        </Button>
       </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.8}
-          onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.nextButton, !pc && styles.nextButtonDisabled]}
-          activeOpacity={0.85}
-          onPress={() => router.push('/profiles' as Href)}>
-          <Text style={styles.nextButtonText}>Suivant : Profils (Étape 3) →</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 6,
-  },
-  badge: {
-    backgroundColor: '#e2e8f0',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1a365d',
-    letterSpacing: 0.5,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#1a365d',
-  },
-  subtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 4,
-    color: '#64748b',
-    paddingHorizontal: 10,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 6,
-    color: '#334155',
-    textTransform: 'uppercase',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
-  },
-  calculatedBox: {
-    backgroundColor: '#eff6ff',
-    padding: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  calculatedLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#1e40af',
-    letterSpacing: 0.5,
-  },
-  calculatedValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1a365d',
-    marginTop: 6,
-  },
-  calculatedHelper: {
-    fontSize: 12,
-    color: '#3b82f6',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backButton: {
-    backgroundColor: '#e2e8f0',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  backButtonText: {
-    color: '#334155',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  nextButton: {
-    flex: 1,
-    backgroundColor: '#1a365d',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    shadowColor: '#1a365d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  nextButtonDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  nextButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});

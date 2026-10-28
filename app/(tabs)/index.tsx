@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import {
   Platform,
-  ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter, Href } from 'expo-router';
+import { Button, Input, Label, TextField } from 'heroui-native';
+
 import { useProjectStore } from '../../src/store/useProjectStore';
+import { StepBadge } from '../../components/ui/StepBadge';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { FieldCard } from '../../components/ui/FieldCard';
 
 export default function HeaderScreen() {
   const router = useRouter();
@@ -31,71 +34,114 @@ export default function HeaderScreen() {
 
   const currentDateObj = date ? new Date(date) : new Date();
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled">
-        {/* Step Badge & Header */}
-        <View style={styles.headerSection}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ÉTAPE 1 / 4</Text>
-          </View>
-          <Text style={styles.title}>FICHE DE RÉCEPTION</Text>
-          <Text style={styles.subtitle}>Informations Générales du Chantier</Text>
-        </View>
+  const formattedDate = date
+    ? new Date(date).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null;
 
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>RÉCEPTION N°</Text>
-            <TextInput
-              style={styles.input}
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a' }}>
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 160 }}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={120}
+        extraHeight={120}
+        enableResetScrollToCoords={false}
+        keyboardOpeningTime={0}
+      >
+        {/* Step badge + heading */}
+        <StepBadge current={1} total={4} />
+        <ScreenHeader
+          title="Fiche de Réception"
+          subtitle="Informations générales du chantier"
+        />
+
+        {/* ─── Identification card ─── */}
+        <FieldCard>
+          {/* Section label */}
+          <View className="flex-row items-center gap-2 mb-4">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              Identification
+            </Text>
+          </View>
+
+          {/* Réception N° */}
+          <TextField className="mb-4">
+            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              Réception N°
+            </Label>
+            <Input
+              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+              placeholder="Ex : 01/2024"
+              placeholderTextColor="#64748b"
               value={receptionNumber}
               onChangeText={(t) => setHeader({ receptionNumber: t })}
-              placeholder="Ex: 01/2024"
-              placeholderTextColor="#999"
+              returnKeyType="next"
             />
-          </View>
+          </TextField>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>V N°</Text>
-              <TextInput
-                style={styles.input}
+          {/* V N° + P N° row */}
+          <View className="flex-row gap-3 mb-4">
+            <TextField className="flex-1">
+              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                V N°
+              </Label>
+              <Input
+                className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+                placeholder="Ex : 02"
+                placeholderTextColor="#64748b"
                 value={vNumber}
                 onChangeText={(t) => setHeader({ vNumber: t })}
-                placeholder="Ex: 02"
-                placeholderTextColor="#999"
+                returnKeyType="next"
               />
-            </View>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>P N°</Text>
-              <TextInput
-                style={styles.input}
+            </TextField>
+
+            <TextField className="flex-1">
+              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                P N°
+              </Label>
+              <Input
+                className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+                placeholder="Ex : 1/4"
+                placeholderTextColor="#64748b"
                 value={pNumber}
                 onChangeText={(t) => setHeader({ pNumber: t })}
-                placeholder="Ex: 1/4"
-                placeholderTextColor="#999"
+                returnKeyType="done"
               />
-            </View>
+            </TextField>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>DATE DE RÉCEPTION</Text>
+          {/* Date de réception */}
+          <View className="mb-1">
+            <Text className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              Date de réception
+            </Text>
             <TouchableOpacity
-              style={styles.dateButton}
-              activeOpacity={0.7}
-              onPress={() => setShowPicker(true)}>
-              <Text style={styles.dateText}>
-                {date
-                  ? new Date(date).toLocaleDateString('fr-FR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })
-                  : 'Sélectionner la date'}
-              </Text>
+              activeOpacity={0.75}
+              onPress={() => setShowPicker(true)}
+              className="bg-slate-700 border border-slate-600 rounded-xl px-4 justify-center"
+              style={{ height: 52 }}
+            >
+              <View className="flex-row items-center justify-between">
+                <Text
+                  className={
+                    formattedDate
+                      ? 'text-slate-50 text-base font-medium'
+                      : 'text-slate-500 text-base'
+                  }
+                >
+                  {formattedDate ?? 'Sélectionner la date'}
+                </Text>
+                {/* Calendar icon (text-based) */}
+                <Text className="text-amber-400 text-lg">📅</Text>
+              </View>
             </TouchableOpacity>
 
             {showPicker && (
@@ -113,143 +159,49 @@ export default function HeaderScreen() {
               />
             )}
           </View>
+        </FieldCard>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{"TYPE D'INTERVENTION VOIRIE PROJETÉE"}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
+        {/* ─── Type d'intervention card ─── */}
+        <FieldCard>
+          <View className="flex-row items-center gap-2 mb-4">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              {"Type d\u2019intervention"}
+            </Text>
+          </View>
+
+          <TextField>
+            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              Voirie projetée
+            </Label>
+            <Input
+              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl"
               multiline
-              numberOfLines={3}
+              numberOfLines={4}
               value={typeIntervention}
               onChangeText={(t) => setHeader({ typeIntervention: t })}
-              placeholder="Ex: Pose de bordures T2, Décaissement et Réglage..."
-              placeholderTextColor="#999"
+              placeholder="Ex : Pose de bordures T2, Décaissement et Réglage..."
+              placeholderTextColor="#64748b"
               textAlignVertical="top"
+              style={{ minHeight: 96, paddingTop: 12 }}
             />
-          </View>
-        </View>
+          </TextField>
+        </FieldCard>
 
-        <TouchableOpacity
-          style={styles.nextButton}
-          activeOpacity={0.85}
-          onPress={handleNext}>
-          <Text style={styles.nextButtonText}>Suivant : Repère de Référence (Étape 2) →</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        {/* ─── CTA ─── */}
+        <Button
+          variant="primary"
+          size="lg"
+          feedbackVariant="scale-ripple"
+          onPress={handleNext}
+          className="mt-1"
+        >
+          <Button.Label className="font-bold tracking-wide">
+            Suivant : Repère de Référence
+          </Button.Label>
+          <Text className="text-white text-lg ml-1">→</Text>
+        </Button>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 10,
-  },
-  badge: {
-    backgroundColor: '#e2e8f0',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1a365d',
-    letterSpacing: 0.5,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#1a365d',
-    letterSpacing: 0.3,
-  },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 4,
-    color: '#64748b',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 6,
-    color: '#334155',
-    textTransform: 'uppercase',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
-  },
-  textArea: {
-    height: 90,
-  },
-  dateButton: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-  },
-  dateText: {
-    fontSize: 15,
-    color: '#0f172a',
-    fontWeight: '500',
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  nextButton: {
-    backgroundColor: '#1a365d',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    shadowColor: '#1a365d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  nextButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});

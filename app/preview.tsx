@@ -3,15 +3,15 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Button } from 'heroui-native';
+
 import { useProjectStore } from '../src/store/useProjectStore';
 import {
   calculateCotePratique,
@@ -45,6 +45,7 @@ export default function PreviewScreen() {
       })
     : '';
 
+  // ── HTML TEMPLATE — UNTOUCHED ──────────────────────────────────────────────
   // Generate HTML for the standard Fiche de Réception Topographique
   // Layout: readings stacked vertically per profile (5 rows per profile),
   // with rowspan on N°, Cote Projet, Dévers, Observation columns.
@@ -345,6 +346,7 @@ export default function PreviewScreen() {
       </html>
     `;
   };
+  // ── END HTML TEMPLATE ──────────────────────────────────────────────────────
 
   const handlePrint = async () => {
     try {
@@ -362,23 +364,43 @@ export default function PreviewScreen() {
     try {
       setIsGenerating(true);
       const html = generateHtml();
-      const { uri } = await Print.printToFileAsync({ html });
 
+      // 1. Generate PDF with Base64 output to avoid Android scoped cache permission issue
+      const { uri: cacheUri, base64 } = await Print.printToFileAsync({
+        html,
+        base64: true,
+      });
+
+      let shareUri = cacheUri;
+
+      if (base64) {
+        // 2. Write directly to documentDirectory via Base64 (100% accessible to FileProvider)
+        const fileName = `fiche-reception-${Date.now()}.pdf`;
+        const destUri = `${FileSystem.documentDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(destUri, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        shareUri = destUri;
+      }
+
+      // 3. Check sharing availability
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
         Alert.alert(
-          'Information',
-          `Fichier PDF généré avec succès :\n${uri}`
+          'Partage non disponible',
+          `Le fichier PDF a été généré ici :\n${shareUri}`
         );
         return;
       }
 
-      await Sharing.shareAsync(uri, {
-        UTI: '.pdf',
+      // 4. Share from documentDirectory URI — works on both iOS and Android
+      await Sharing.shareAsync(shareUri, {
+        UTI: 'com.adobe.pdf',
         mimeType: 'application/pdf',
         dialogTitle: 'Partager la Fiche de Réception',
       });
     } catch (error) {
+      console.error('PDF share error:', error);
       Alert.alert('Erreur', 'Échec du partage PDF : ' + String(error));
     } finally {
       setIsGenerating(false);
@@ -404,294 +426,131 @@ export default function PreviewScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
       <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerSection}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ÉTAPE 4 / 4 - FINALISATION</Text>
+        contentContainerClassName="px-5 pt-6 pb-10"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Header ── */}
+        <View className="items-center mb-6">
+          <View className="bg-emerald-500 rounded-full px-4 py-1.5 mb-3">
+            <Text className="text-white text-xs font-black tracking-widest uppercase">
+              Étape 4 / 4 — Finalisation
+            </Text>
           </View>
-          <Text style={styles.title}>Aperçu & Exportation PDF</Text>
-          <Text style={styles.subtitle}>
-            {"Vérifiez la synthèse ci-dessous avant d'imprimer ou de partager la fiche officielle."}
+          <Text className="text-2xl font-black text-slate-50 text-center">
+            {"Aperçu & Exportation PDF"}
+          </Text>
+          <Text className="text-slate-400 text-sm text-center mt-1.5 px-4">
+            {"Vérifiez la synthèse ci-dessous avant d\u2019imprimer ou de partager la fiche officielle."}
           </Text>
         </View>
 
-        {/* Project Summary Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>1. Résumé du Chantier</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Réception N° :</Text>
-            <Text style={styles.infoValue}>{receptionNumber || 'Non spécifié'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>V N° / P N° :</Text>
-            <Text style={styles.infoValue}>
-              {vNumber || '-'} / {pNumber || '-'}
+        {/* ── 1. Résumé du Chantier ── */}
+        <View className="bg-slate-800 rounded-2xl p-5 mb-4 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-4">
+            <View className="w-1 h-5 bg-emerald-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              1. Résumé du Chantier
             </Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Date :</Text>
-            <Text style={styles.infoValue}>{formattedDate || 'Non spécifiée'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{"Type d'intervention :"}</Text>
-            <Text style={styles.infoValue} numberOfLines={2}>
+
+          {[
+            { label: 'Réception N°', value: receptionNumber || 'Non spécifié' },
+            { label: 'V N° / P N°', value: `${vNumber || '–'} / ${pNumber || '–'}` },
+            { label: 'Date', value: formattedDate || 'Non spécifiée' },
+          ].map(({ label, value }) => (
+            <View key={label} className="flex-row justify-between py-2.5 border-b border-slate-700">
+              <Text className="text-slate-400 text-sm font-semibold">{label}</Text>
+              <Text className="text-slate-100 text-sm font-bold max-w-[55%] text-right">{value}</Text>
+            </View>
+          ))}
+
+          <View className="flex-row justify-between pt-2.5">
+            <Text className="text-slate-400 text-sm font-semibold">{"Type d'intervention"}</Text>
+            <Text className="text-slate-100 text-sm font-bold max-w-[55%] text-right" numberOfLines={2}>
               {typeIntervention || 'Non spécifié'}
             </Text>
           </View>
         </View>
 
-        {/* Reference & Profiles Summary Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>2. Données Topographiques</Text>
-          <View style={styles.gridRow}>
-            <View style={styles.gridItem}>
-              <Text style={styles.gridLabel}>REPÈRE</Text>
-              <Text style={styles.gridValue}>{repere || '-'}</Text>
+        {/* ── 2. Données Topographiques ── */}
+        <View className="bg-slate-800 rounded-2xl p-5 mb-5 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-4">
+            <View className="w-1 h-5 bg-emerald-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              2. Données Topographiques
+            </Text>
+          </View>
+
+          <View className="flex-row gap-3">
+            {/* Repère */}
+            <View className="flex-1 bg-slate-900 rounded-xl p-3 items-center border border-slate-700">
+              <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Repère</Text>
+              <Text className="text-slate-100 text-sm font-black text-center">{repere || '–'}</Text>
             </View>
-            <View style={styles.gridItem}>
-              <Text style={styles.gridLabel}>P.C. CALCULÉ</Text>
-              <Text style={[styles.gridValue, { color: '#1e40af' }]}>
-                {pc !== null ? `${pc.toFixed(3)} m` : '-'}
+            {/* P.C. */}
+            <View className="flex-1 bg-slate-900 rounded-xl p-3 items-center border border-amber-400/30">
+              <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">P.C. Calculé</Text>
+              <Text className="text-amber-400 text-sm font-black">
+                {pc !== null ? `${pc.toFixed(3)} m` : '–'}
               </Text>
             </View>
-            <View style={styles.gridItem}>
-              <Text style={styles.gridLabel}>NB PROFILS</Text>
-              <Text style={styles.gridValue}>{profiles.length}</Text>
+            {/* Nb Profils */}
+            <View className="flex-1 bg-slate-900 rounded-xl p-3 items-center border border-slate-700">
+              <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Profils</Text>
+              <Text className="text-slate-100 text-2xl font-black">{profiles.length}</Text>
             </View>
           </View>
         </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            activeOpacity={0.85}
-            disabled={isGenerating}
-            onPress={handleShare}>
+        {/* ── Action buttons ── */}
+        <View className="gap-3 mb-5">
+          {/* Primary: Share PDF */}
+          <Button
+            variant="primary"
+            size="lg"
+            feedbackVariant="scale-ripple"
+            isDisabled={isGenerating}
+            onPress={handleShare}
+          >
             {isGenerating ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Text style={styles.primaryButtonIcon}>📤</Text>
-                <Text style={styles.primaryButtonText}>
+                <Text className="text-white text-xl mr-2">📤</Text>
+                <Button.Label className="font-bold tracking-wide">
                   Partager / Enregistrer le PDF
-                </Text>
+                </Button.Label>
               </>
             )}
-          </TouchableOpacity>
+          </Button>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            activeOpacity={0.85}
-            disabled={isGenerating}
-            onPress={handlePrint}>
-            <Text style={styles.secondaryButtonIcon}>🖨️</Text>
-            <Text style={styles.secondaryButtonText}>
-              Imprimer directement
-            </Text>
-          </TouchableOpacity>
+          {/* Secondary: Print */}
+          <Button
+            variant="outline"
+            size="lg"
+            isDisabled={isGenerating}
+            onPress={handlePrint}
+          >
+            <Text className="text-xl mr-2">🖨️</Text>
+            <Button.Label className="font-bold">Imprimer directement</Button.Label>
+          </Button>
         </View>
 
-        {/* Navigations */}
-        <View style={styles.navRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            activeOpacity={0.8}
-            onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>← Revenir aux Profils</Text>
-          </TouchableOpacity>
+        {/* ── Nav row ── */}
+        <View className="flex-row justify-between items-center pt-2">
+          <Button variant="ghost" size="md" onPress={() => router.back()}>
+            <Button.Label className="font-bold text-slate-400">
+              ← Revenir aux Profils
+            </Button.Label>
+          </Button>
 
-          <TouchableOpacity
-            style={styles.resetButton}
-            activeOpacity={0.8}
-            onPress={handleReset}>
-            <Text style={styles.resetButtonText}>Nouveau Chantier ⟳</Text>
-          </TouchableOpacity>
+          <Button variant="danger-soft" size="md" onPress={handleReset}>
+            <Button.Label className="font-bold">Nouveau Chantier ⟳</Button.Label>
+          </Button>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 6,
-  },
-  badge: {
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#1a365d',
-  },
-  subtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 4,
-    color: '#64748b',
-    paddingHorizontal: 12,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1a365d',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingBottom: 6,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-    maxWidth: '65%',
-    textAlign: 'right',
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  gridItem: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  gridLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  gridValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  actionsSection: {
-    marginTop: 8,
-    marginBottom: 20,
-    gap: 12,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    backgroundColor: '#1a365d',
-    paddingVertical: 16,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1a365d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryButtonIcon: {
-    fontSize: 18,
-    marginRight: 10,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingVertical: 15,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#1a365d',
-  },
-  secondaryButtonIcon: {
-    fontSize: 18,
-    marginRight: 10,
-  },
-  secondaryButtonText: {
-    color: '#1a365d',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-  },
-  backButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: '#64748b',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  resetButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  resetButtonText: {
-    color: '#dc2626',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});

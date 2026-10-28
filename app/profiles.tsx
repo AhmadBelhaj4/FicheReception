@@ -2,20 +2,20 @@ import React from 'react';
 import {
   Alert,
   FlatList,
-  StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Href } from 'expo-router';
 import * as Crypto from 'expo-crypto';
+import { Button } from 'heroui-native';
+
 import { useProjectStore } from '../src/store/useProjectStore';
 import {
   calculateCotePratique,
   calculateDifference,
 } from '../src/utils/calculations';
 import { ProfileData } from '../src/types';
+import { StepBadge } from '../components/ui/StepBadge';
 
 export default function ProfilesListScreen() {
   const router = useRouter();
@@ -78,92 +78,112 @@ export default function ProfilesListScreen() {
       diffAxe = calculateDifference(item.coteProjet, cotePratiqueAxe);
     }
 
-    const diffBadgeColor =
-      diffAxe === null
-        ? '#94a3b8'
-        : diffAxe > 0
-        ? '#16a34a' // Remblai
-        : diffAxe < 0
-        ? '#dc2626' // Déblai
-        : '#475569';
+    const isRemblai = diffAxe !== null && diffAxe > 0;
+    const isDeblai  = diffAxe !== null && diffAxe < 0;
 
     const diffLabel =
       diffAxe === null
         ? 'Non calculé'
-        : diffAxe > 0
-        ? `Remblai (+${diffAxe.toFixed(3)} m)`
-        : diffAxe < 0
-        ? `Déblai (${diffAxe.toFixed(3)} m)`
-        : 'Égalité (0.000 m)';
+        : isRemblai
+        ? `Remblai  +${diffAxe.toFixed(3)} m`
+        : isDeblai
+        ? `Déblai  ${diffAxe.toFixed(3)} m`
+        : 'Conforme  0.000 m';
+
+    const badgeBg = diffAxe === null
+      ? 'bg-slate-700'
+      : isRemblai
+      ? 'bg-emerald-900'
+      : isDeblai
+      ? 'bg-red-900'
+      : 'bg-slate-700';
+
+    const badgeText = diffAxe === null
+      ? 'text-slate-400'
+      : isRemblai
+      ? 'text-emerald-300'
+      : isDeblai
+      ? 'text-red-300'
+      : 'text-slate-300';
+
+    const diffValueColor = diffAxe === null
+      ? 'text-slate-500'
+      : isRemblai
+      ? 'text-emerald-400'
+      : isDeblai
+      ? 'text-red-400'
+      : 'text-slate-400';
 
     return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.profileBadge}>
-            <Text style={styles.profileBadgeText}>PROFIL N° {index + 1}</Text>
+      <View className="bg-slate-800 rounded-2xl p-4 mb-3 border border-slate-700">
+        {/* Card header row */}
+        <View className="flex-row items-center justify-between mb-3">
+          <View className="bg-amber-400 rounded-lg px-3 py-1">
+            <Text className="text-slate-900 text-xs font-black tracking-widest uppercase">
+              Profil N° {index + 1}
+            </Text>
           </View>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.editButton}
-              activeOpacity={0.7}
-              onPress={() => handleEditProfile(item.id)}>
-              <Text style={styles.editButtonText}>Modifier</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              activeOpacity={0.7}
-              onPress={() => handleDeleteProfile(item.id, index)}>
-              <Text style={styles.deleteButtonText}>✕</Text>
-            </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => handleEditProfile(item.id)}
+            >
+              <Button.Label className="font-bold">Modifier</Button.Label>
+            </Button>
+            <Button
+              variant="danger-soft"
+              size="sm"
+              isIconOnly
+              onPress={() => handleDeleteProfile(item.id, index)}
+            >
+              <Text className="text-red-400 font-bold text-sm">✕</Text>
+            </Button>
           </View>
         </View>
 
-        {/* Quick summary metrics */}
-        <View style={styles.metricsRow}>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>LECTURE AXE</Text>
-            <Text style={styles.metricValue}>
-              {item.axe !== null ? `${item.axe.toFixed(3)} m` : '-'}
+        {/* Metrics row */}
+        <View className="flex-row bg-slate-900 rounded-xl p-3 mb-3">
+          <View className="flex-1 items-center">
+            <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
+              Lec. Axe
+            </Text>
+            <Text className="text-slate-200 text-sm font-bold">
+              {item.axe !== null ? `${item.axe.toFixed(3)} m` : '–'}
             </Text>
           </View>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>COTE PROJET</Text>
-            <Text style={styles.metricValue}>
-              {item.coteProjet !== null
-                ? `${item.coteProjet.toFixed(3)} m`
-                : '-'}
+          <View className="w-px bg-slate-700 mx-1" />
+          <View className="flex-1 items-center">
+            <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
+              Cote Projet
+            </Text>
+            <Text className="text-slate-200 text-sm font-bold">
+              {item.coteProjet !== null ? `${item.coteProjet.toFixed(3)} m` : '–'}
             </Text>
           </View>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricLabel}>DIFF. AXE</Text>
-            <Text
-              style={[
-                styles.metricValue,
-                { color: diffBadgeColor, fontWeight: '800' },
-              ]}>
+          <View className="w-px bg-slate-700 mx-1" />
+          <View className="flex-1 items-center">
+            <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
+              Diff. Axe
+            </Text>
+            <Text className={`text-sm font-black ${diffValueColor}`}>
               {diffAxe !== null
-                ? diffAxe > 0
+                ? isRemblai
                   ? `+${diffAxe.toFixed(3)}`
                   : diffAxe.toFixed(3)
-                : '-'}
+                : '–'}
             </Text>
           </View>
         </View>
 
-        {/* Status pill & observation */}
-        <View style={styles.cardFooter}>
-          <View
-            style={[
-              styles.statusPill,
-              { backgroundColor: diffBadgeColor + '18' },
-            ]}>
-            <Text style={[styles.statusPillText, { color: diffBadgeColor }]}>
-              {diffLabel}
-            </Text>
+        {/* Status pill + obs */}
+        <View className="flex-row items-center justify-between">
+          <View className={`${badgeBg} rounded-lg px-3 py-1.5`}>
+            <Text className={`${badgeText} text-xs font-bold`}>{diffLabel}</Text>
           </View>
           {item.observation ? (
-            <Text style={styles.obsText} numberOfLines={1}>
-              Obs : {item.observation}
+            <Text className="text-slate-500 text-xs italic max-w-[45%]" numberOfLines={1}>
+              {item.observation}
             </Text>
           ) : null}
         </View>
@@ -172,47 +192,53 @@ export default function ProfilesListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header section with context */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ÉTAPE 3 / 4</Text>
-          </View>
-          <View style={styles.infoPill}>
-            <Text style={styles.infoPillText}>
-              {repere ? `Repère: ${repere}` : 'Repère'} | P.C.:{' '}
-              {pc !== null ? `${pc.toFixed(3)} m` : '-'}
+    <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
+      {/* ── Sticky header ── */}
+      <View className="px-5 pt-5 pb-3 border-b border-slate-800">
+        <View className="flex-row items-center justify-between mb-2">
+          <StepBadge current={3} total={4} />
+          {/* P.C. context pill */}
+          <View className="bg-slate-800 border border-amber-400/40 rounded-lg px-3 py-1">
+            <Text className="text-amber-400 text-xs font-bold">
+              P.C.{' '}
+              {pc !== null ? `${pc.toFixed(3)} m` : '–'}
             </Text>
           </View>
         </View>
-        <Text style={styles.title}>Profils en Travers</Text>
-        <Text style={styles.subtitle}>
+        <Text className="text-xl font-black text-slate-50 tracking-tight">
+          Profils en Travers
+        </Text>
+        <Text className="text-slate-400 text-sm mt-0.5">
           {profiles.length === 0
-            ? 'Commencez par ajouter les profils relevés sur le terrain.'
-            : `${profiles.length} profil(s) enregistré(s)`}
+            ? 'Ajoutez les profils relevés sur le terrain.'
+            : `${profiles.length} profil(s) enregistré(s)${repere ? `  ·  Repère : ${repere}` : ''}`}
         </Text>
       </View>
 
-      {/* Add Profile Button */}
-      <View style={styles.addBar}>
-        <TouchableOpacity
-          style={styles.addButton}
-          activeOpacity={0.85}
-          onPress={handleAddProfile}>
-          <Text style={styles.addButtonIcon}>+</Text>
-          <Text style={styles.addButtonText}>Ajouter un Profil</Text>
-        </TouchableOpacity>
+      {/* ── Add Profile button ── */}
+      <View className="px-5 py-3">
+        <Button
+          variant="primary"
+          size="lg"
+          feedbackVariant="scale-ripple"
+          onPress={handleAddProfile}
+        >
+          <Text className="text-white text-xl font-black mr-1">+</Text>
+          <Button.Label className="font-bold tracking-wide">
+            Ajouter un Profil
+          </Button.Label>
+        </Button>
       </View>
 
-      {/* Profile list or empty state */}
+      {/* ── List or empty state ── */}
       {profiles.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📐</Text>
-          <Text style={styles.emptyTitle}>Aucun profil enregistré</Text>
-          <Text style={styles.emptyDescription}>
-            Appuyez sur le bouton « + Ajouter un Profil » ci-dessus pour saisir les
-            lectures avant (D2, D1, Axe, G1, G2) et cotes projets.
+        <View className="flex-1 items-center justify-center px-10">
+          <Text className="text-5xl mb-4">📐</Text>
+          <Text className="text-slate-200 text-lg font-black text-center mb-2">
+            Aucun profil enregistré
+          </Text>
+          <Text className="text-slate-500 text-sm text-center leading-relaxed">
+            Appuyez sur le bouton ci-dessus pour saisir les lectures avant (D2, D1, Axe, G1, G2) et cotes projets.
           </Text>
         </View>
       ) : (
@@ -220,290 +246,36 @@ export default function ProfilesListScreen() {
           data={profiles}
           keyExtractor={(item) => item.id}
           renderItem={renderProfileItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Bottom navigation buttons */}
-      <View style={styles.footerBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.8}
-          onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
+      {/* ── Footer nav ── */}
+      <View className="flex-row gap-3 px-5 py-4 border-t border-slate-800 bg-slate-900">
+        <Button
+          variant="outline"
+          size="lg"
+          onPress={() => router.back()}
+          className="flex-none px-5"
+        >
+          <Button.Label className="font-bold">← Retour</Button.Label>
+        </Button>
 
-        <TouchableOpacity
-          style={[
-            styles.generateButton,
-            profiles.length === 0 && styles.generateButtonDisabled,
-          ]}
-          activeOpacity={0.85}
-          disabled={profiles.length === 0}
-          onPress={() => router.push('/preview' as Href)}>
-          <Text style={styles.generateButtonText}>
-            Aperçu & Export PDF (Étape 4) →
-          </Text>
-        </TouchableOpacity>
+        <Button
+          variant="primary"
+          size="lg"
+          feedbackVariant="scale-ripple"
+          isDisabled={profiles.length === 0}
+          onPress={() => router.push('/preview' as Href)}
+          className="flex-1"
+        >
+          <Button.Label className="font-bold tracking-wide">
+            Export PDF
+          </Button.Label>
+          <Text className="text-white text-lg ml-1">→</Text>
+        </Button>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  badge: {
-    backgroundColor: '#e2e8f0',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 16,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#1a365d',
-    letterSpacing: 0.5,
-  },
-  infoPill: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  infoPillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1e40af',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1a365d',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  addBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  addButton: {
-    flexDirection: 'row',
-    backgroundColor: '#1a365d',
-    paddingVertical: 14,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1a365d',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  addButtonIcon: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '800',
-    marginRight: 8,
-    lineHeight: 22,
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  profileBadge: {
-    backgroundColor: '#0f172a',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  profileBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  editButton: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  editButtonText: {
-    color: '#1d4ed8',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  deleteButton: {
-    backgroundColor: '#fee2e2',
-    width: 30,
-    height: 30,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#dc2626',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748b',
-    marginBottom: 2,
-  },
-  metricValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  obsText: {
-    fontSize: 11,
-    color: '#64748b',
-    fontStyle: 'italic',
-    maxWidth: '50%',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1a365d',
-    marginBottom: 6,
-  },
-  emptyDescription: {
-    fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  footerBar: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    alignItems: 'center',
-  },
-  backButton: {
-    backgroundColor: '#e2e8f0',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  backButtonText: {
-    color: '#334155',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  generateButton: {
-    flex: 1,
-    backgroundColor: '#1a365d',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    shadowColor: '#1a365d',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  generateButtonDisabled: {
-    backgroundColor: '#94a3b8',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  generateButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
