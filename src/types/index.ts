@@ -37,10 +37,9 @@ export interface ProjectState {
   // Step 3: Profiles
   profiles: ProfileData[];
 
-  // Step 4: Signatures (base64 PNG strings, null = not signed)
-  signatureEntreprise: string | null;
-  signatureBureau: string | null;
-  signatureClient: string | null;
+  // Partner / Client / Bureau logos specific to this fiche
+  logoClient: string | null; // e.g. ARRU / Maître d'Ouvrage (left)
+  logoBureau: string | null; // e.g. Bureau de Contrôle / SOIT (right)
 
   // Actions
   setHeader: (data: HeaderData) => void;
@@ -49,7 +48,7 @@ export interface ProjectState {
   updateProfile: (id: string, data: Partial<ProfileData>) => void;
   deleteProfile: (id: string) => void;
   duplicateProfile: (id: string) => void;
-  setSignature: (party: 'entreprise' | 'bureau' | 'client', base64: string | null) => void;
+  setLogos: (logos: { logoClient?: string | null; logoBureau?: string | null }) => void;
   resetProject: () => void;
 }
 
@@ -64,7 +63,7 @@ export interface SavedProject {
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
   status: ProjectStatus;
-  // All the survey data fields (mirrors the persisted slice of ProjectState)
+  // Survey data fields
   receptionNumber: string;
   vNumber: string;
   pNumber: string;
@@ -75,6 +74,8 @@ export interface SavedProject {
   lectureArriere: number | null;
   pc: number | null;
   profiles: ProfileData[];
+  logoClient?: string | null;
+  logoBureau?: string | null;
 }
 
 export interface ProjectsState {
@@ -85,6 +86,7 @@ export interface ProjectsState {
   createProject: (name: string) => string; // returns new id
   openProject: (id: string) => void;
   saveActiveProject: (data: Partial<Omit<SavedProject, 'id' | 'createdAt'>>) => void;
+  saveOrUpdateProject: (data: Omit<SavedProject, 'id' | 'createdAt' | 'updatedAt' | 'name'> & { id?: string | null; name?: string }) => string;
   updateProjectStatus: (id: string, status: ProjectStatus) => void;
   deleteProject: (id: string) => void;
   archiveProject: (id: string) => void;

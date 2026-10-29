@@ -59,8 +59,8 @@ export default function HeaderScreen() {
         {/* Step badge + heading */}
         <StepBadge current={1} total={4} />
         <ScreenHeader
-          title="Fiche de R\u00e9ception"
-          subtitle="Informations g\u00e9n\u00e9rales du chantier"
+          title="Fiche de Réception"
+          subtitle="Informations générales du chantier"
         />
 
         {/* ─── Identification card ─── */}
@@ -73,10 +73,10 @@ export default function HeaderScreen() {
             </Text>
           </View>
 
-          {/* R\u00e9ception N\u00b0 */}
+          {/* Réception N° */}
           <TextField className="mb-4">
             <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              R\u00e9ception N\u00b0
+              Réception N°
             </Label>
             <Input
               className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
@@ -88,11 +88,11 @@ export default function HeaderScreen() {
             />
           </TextField>
 
-          {/* V N\u00b0 + P N\u00b0 row */}
+          {/* V N° + P N° row */}
           <View className="flex-row gap-3 mb-4">
             <TextField className="flex-1">
               <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                V N\u00b0
+                V N°
               </Label>
               <Input
                 className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
@@ -106,7 +106,7 @@ export default function HeaderScreen() {
 
             <TextField className="flex-1">
               <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                P N\u00b0
+                P N°
               </Label>
               <Input
                 className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
@@ -119,10 +119,10 @@ export default function HeaderScreen() {
             </TextField>
           </View>
 
-          {/* Date de r\u00e9ception */}
+          {/* Date de réception */}
           <View className="mb-1">
             <Text className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              Date de r\u00e9ception
+              Date de réception
             </Text>
             <TouchableOpacity
               activeOpacity={0.75}
@@ -138,10 +138,10 @@ export default function HeaderScreen() {
                       : 'text-slate-500 text-base'
                   }
                 >
-                  {formattedDate ?? 'S\u00e9lectionner la date'}
+                  {formattedDate ?? 'Sélectionner la date'}
                 </Text>
                 {/* Calendar icon (text-based) */}
-                <Text className="text-amber-400 text-lg">\uD83D\uDCC5</Text>
+                <Text className="text-amber-400 text-lg">📅</Text>
               </View>
             </TouchableOpacity>
 
@@ -167,13 +167,13 @@ export default function HeaderScreen() {
           <View className="flex-row items-center gap-2 mb-4">
             <View className="w-1 h-5 bg-amber-400 rounded-full" />
             <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
-              {"Type d\u2019intervention"}
+              {"Type d'intervention"}
             </Text>
           </View>
 
           <TextField>
             <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              Voirie projet\u00e9e
+              Voirie projetée
             </Label>
             <Input
               className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl"
@@ -181,7 +181,7 @@ export default function HeaderScreen() {
               numberOfLines={4}
               value={typeIntervention}
               onChangeText={(t) => setHeader({ typeIntervention: t })}
-              placeholder="Ex : Pose de bordures T2, D\u00e9caissement et R\u00e9glage..."
+              placeholder="Ex : Pose de bordures T2, Décaissement et Réglage..."
               placeholderTextColor="#64748b"
               textAlignVertical="top"
               style={{ minHeight: 96, paddingTop: 12 }}
@@ -198,9 +198,9 @@ export default function HeaderScreen() {
           className="mt-1"
         >
           <Button.Label className="font-bold tracking-wide">
-            Suivant : Rep\u00e8re de R\u00e9f\u00e9rence
+            Suivant : Repère de Référence
           </Button.Label>
-          <Text className="text-white text-lg ml-1">{'\u2192'}</Text>
+          <Text className="text-white text-lg ml-1">→</Text>
         </Button>
 
         {/* ── Bottom links row ── */}
@@ -211,7 +211,7 @@ export default function HeaderScreen() {
             onPress={() => router.push('/projects' as Href)}
             className="flex-1"
           >
-            <Text className="mr-2 text-base">{'\uD83C\uDFD7\uFE0F'}</Text>
+            <Text className="mr-2 text-base">🏗️</Text>
             <Button.Label className="font-bold text-slate-300">Chantiers</Button.Label>
           </Button>
           <Button
@@ -220,8 +220,8 @@ export default function HeaderScreen() {
             onPress={() => router.push('/settings' as Href)}
             className="flex-1"
           >
-            <Text className="mr-2 text-base">{'\u2699\uFE0F'}</Text>
-            <Button.Label className="font-bold text-slate-300">{"Param\u00e8tres"}</Button.Label>
+            <Text className="mr-2 text-base">⚙️</Text>
+            <Button.Label className="font-bold text-slate-300">Paramètres</Button.Label>
           </Button>
         </View>
       </KeyboardAwareScrollView>

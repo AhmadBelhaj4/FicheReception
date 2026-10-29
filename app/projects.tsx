@@ -31,7 +31,7 @@ export default function ProjectsScreen() {
   const router = useRouter();
   const { projects, createProject, openProject, deleteProject, archiveProject } =
     useProjectsStore();
-  const { setHeader, setReference, addProfile, resetProject } = useProjectStore();
+  const { setHeader, setReference, addProfile, setLogos, resetProject } = useProjectStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -52,6 +52,10 @@ export default function ProjectsScreen() {
       repere: proj.repere,
       alt: proj.alt ?? undefined,
       lectureArriere: proj.lectureArriere ?? undefined,
+    });
+    setLogos({
+      logoClient: proj.logoClient ?? null,
+      logoBureau: proj.logoBureau ?? null,
     });
     // Re-add each profile
     proj.profiles.forEach((p) => addProfile(p));

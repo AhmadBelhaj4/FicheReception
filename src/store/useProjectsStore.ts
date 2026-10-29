@@ -31,6 +31,8 @@ export const useProjectsStore = create<ProjectsState>()(
           lectureArriere: null,
           pc: null,
           profiles: [],
+          logoClient: null,
+          logoBureau: null,
         };
         set((state) => ({
           projects: [newProject, ...state.projects],
@@ -53,6 +55,62 @@ export const useProjectsStore = create<ProjectsState>()(
               : p
           ),
         }));
+      },
+
+      saveOrUpdateProject: (data) => {
+        const { activeProjectId, projects } = get();
+        const targetId = data.id || activeProjectId;
+        const now = toLocalISODate();
+
+        if (targetId && projects.some((p) => p.id === targetId)) {
+          // Update existing project
+          const { id: _ignoreId, ...restData } = data;
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === targetId
+                ? {
+                    ...p,
+                    ...restData,
+                    id: p.id,
+                    name: data.name || p.name,
+                    updatedAt: now,
+                  }
+                : p
+            ),
+          }));
+          return targetId;
+        }
+
+        // Create new saved project
+        const newId = `proj-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const fallbackName = data.receptionNumber
+          ? `Chantier N° ${data.receptionNumber}`
+          : `Chantier du ${now}`;
+        const newProject: SavedProject = {
+          id: newId,
+          name: data.name || fallbackName,
+          createdAt: now,
+          updatedAt: now,
+          status: 'En cours',
+          receptionNumber: data.receptionNumber || '',
+          vNumber: data.vNumber || '',
+          pNumber: data.pNumber || '',
+          date: data.date || now,
+          typeIntervention: data.typeIntervention || '',
+          repere: data.repere || '',
+          alt: data.alt ?? null,
+          lectureArriere: data.lectureArriere ?? null,
+          pc: data.pc ?? null,
+          profiles: data.profiles || [],
+          logoClient: data.logoClient ?? null,
+          logoBureau: data.logoBureau ?? null,
+        };
+
+        set((state) => ({
+          projects: [newProject, ...state.projects],
+          activeProjectId: newId,
+        }));
+        return newId;
       },
 
       updateProjectStatus: (id: string, status: ProjectStatus) => {

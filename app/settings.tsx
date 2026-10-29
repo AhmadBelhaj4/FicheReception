@@ -31,8 +31,7 @@ export default function SettingsScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [4, 1],
-      quality: 0.7,
+      quality: 0.8,
       base64: true,
     });
 
