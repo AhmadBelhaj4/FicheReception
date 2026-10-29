@@ -82,8 +82,7 @@ export default function SettingsScreen() {
           </View>
 
           <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
-            Le logo s'affiche dans l'en-tête de chaque PDF généré, à la place du texte institutionnel.
-            Format recommandé : image horizontale (rapport 4:1), PNG ou JPEG.
+            {"Le logo s'affiche dans l'en-tête de chaque PDF généré, à la place du texte institutionnel.\nFormat recommandé : image horizontale (rapport 4:1), PNG ou JPEG."}
           </Text>
 
           {logoBase64 ? (
@@ -141,7 +140,7 @@ export default function SettingsScreen() {
           </View>
 
           <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
-            Seuil en cm pour l'indicateur de conformité sur chaque point. Un écart inférieur ou égal à ce seuil affiche ✓, sinon ⚠.
+            {"Seuil en cm pour l'indicateur de conformité sur chaque point. Un écart inférieur ou égal à ce seuil affiche ✓, sinon ⚠."}
           </Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

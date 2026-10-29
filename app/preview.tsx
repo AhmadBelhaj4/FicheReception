@@ -293,12 +293,7 @@ export default function PreviewScreen() {
         </style>
       </head>
       <body>
-        <div class="institution">
-          RÉPUBLIQUE TUNISIENNE<br>
-          AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE<br>
-          TRAVAUX DE RÉHABILITATION DU QUARTIER ENNOUR<br>
-          DANS LA COMMUNE DE KASSERINE
-        </div>
+        ${institutionHtml}
 
         <div class="title-box">
           <h1>FICHE DE RÉCEPTION TOPOGRAPHIQUE</h1>
@@ -542,7 +537,7 @@ export default function PreviewScreen() {
 
       // Each profile becomes a <CrossSect> with one <CrossSectSurf> containing 5 points.
       // Horizontal offsets are nominal (ki-2) since real distances aren't captured.
-      const pointKeys: Array<'d1' | 'd2' | 'axe' | 'g1' | 'g2'> = ['d1', 'd2', 'axe', 'g1', 'g2'];
+      const pointKeys: ('d1' | 'd2' | 'axe' | 'g1' | 'g2')[] = ['d1', 'd2', 'axe', 'g1', 'g2'];
 
       const crossSectsXml = profiles.map((p, idx) => {
         const pntPairs = pointKeys

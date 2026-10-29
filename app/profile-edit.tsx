@@ -19,7 +19,6 @@ import {
   checkDifference,
   checkReading,
   getConformity,
-  DEFAULT_TOLERANCE_M,
 } from '../src/utils/calculations';
 
 // ─── NumInput ────────────────────────────────────────────────────────────────
