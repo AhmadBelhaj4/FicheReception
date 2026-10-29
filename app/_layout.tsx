@@ -97,6 +97,13 @@ function RootLayoutNav() {
                 headerBackTitle: "Retour",
               }}
             />
+            <Stack.Screen
+              name="projects"
+              options={{
+                title: "Mes Chantiers",
+                headerBackTitle: "Retour",
+              }}
+            />
           </Stack>
         </ThemeProvider>
       </HeroUINativeProvider>

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
@@ -93,7 +94,7 @@ function NumInput({
         keyboardType="decimal-pad"
         value={text}
         onChangeText={handleChange}
-        onFocus={() => setIsFocused(true)}
+        onFocus={() => { setIsFocused(true); Haptics.selectionAsync(); }}
         onBlur={handleBlur}
         placeholder={placeholder}
         placeholderTextColor="#64748b"

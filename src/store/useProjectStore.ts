@@ -55,6 +55,24 @@ export const useProjectStore = create<ProjectState>()(
           profiles: state.profiles.filter((p) => p.id !== id),
         })),
 
+      duplicateProfile: (id) =>
+        set((state) => {
+          const source = state.profiles.find((p) => p.id === id);
+          if (!source) return state;
+          // Generate a new UUID-like id using Math.random (expo-crypto not available in store context)
+          const newId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          const clone: import('../types').ProfileData = {
+            ...source,
+            id: newId,
+            observation: source.observation,
+          };
+          // Insert clone right after the source profile
+          const idx = state.profiles.findIndex((p) => p.id === id);
+          const newProfiles = [...state.profiles];
+          newProfiles.splice(idx + 1, 0, clone);
+          return { profiles: newProfiles };
+        }),
+
       resetProject: () => set(createInitialState()),
     }),
     {

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import * as Crypto from 'expo-crypto';
+import * as Haptics from 'expo-haptics';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
@@ -19,9 +20,10 @@ import { StepBadge } from '../components/ui/StepBadge';
 
 export default function ProfilesListScreen() {
   const router = useRouter();
-  const { profiles, pc, repere, addProfile, deleteProfile } = useProjectStore();
+  const { profiles, pc, repere, addProfile, deleteProfile, duplicateProfile } = useProjectStore();
 
   const handleAddProfile = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newId = Crypto.randomUUID();
     const newProfile: ProfileData = {
       id: newId,
@@ -40,6 +42,10 @@ export default function ProfilesListScreen() {
       pathname: '/profile-edit',
       params: { id: newId },
     } as unknown as Href);
+  };
+
+  const handleDuplicateProfile = (id: string) => {
+    duplicateProfile(id);
   };
 
   const handleEditProfile = (id: string) => {
@@ -130,6 +136,13 @@ export default function ProfilesListScreen() {
               onPress={() => handleEditProfile(item.id)}
             >
               <Button.Label className="font-bold">Modifier</Button.Label>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => handleDuplicateProfile(item.id)}
+            >
+              <Button.Label className="font-bold text-amber-400">Dupliquer</Button.Label>
             </Button>
             <Button
               variant="danger-soft"

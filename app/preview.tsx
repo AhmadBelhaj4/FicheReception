@@ -415,6 +415,177 @@ export default function PreviewScreen() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      setIsGenerating(true);
+
+      // Build CSV header
+      const headers = [
+        'Profil N°',
+        'Point',
+        'Lecture AV (m)',
+        'Cote Pratique (m)',
+        'Cote Projet (m)',
+        'Différence (m)',
+        'Dévers (%)',
+        'Distance (m)',
+        'Observation',
+      ].join(';');
+
+      // Build rows — 5 rows per profile (D1, D2(F), Axe, G1, G2(F))
+      const points = ['D1', 'D2 (F)', 'Axe', 'G1', 'G2 (F)'] as const;
+      type PointKey = 'd1' | 'd2' | 'axe' | 'g1' | 'g2';
+      const pointKeys: PointKey[] = ['d1', 'd2', 'axe', 'g1', 'g2'];
+
+      const rows: string[] = [];
+
+      profiles.forEach((p, idx) => {
+        points.forEach((pointLabel, pIdx) => {
+          const key = pointKeys[pIdx];
+          const lecture = p[key];
+          const cotePratique =
+            pc !== null && lecture !== null ? calculateCotePratique(pc, lecture) : null;
+          const difference =
+            p.coteProjet !== null && cotePratique !== null
+              ? calculateDifference(p.coteProjet, cotePratique)
+              : null;
+
+          // Escape a cell value for CSV (wrap in quotes if it contains ; or ")
+          const esc = (v: string | number | null) => {
+            if (v === null || v === undefined) return '';
+            const str = String(v);
+            if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          };
+
+          rows.push(
+            [
+              esc(idx + 1),
+              esc(pointLabel),
+              esc(lecture !== null ? lecture.toFixed(3) : null),
+              esc(cotePratique !== null ? cotePratique.toFixed(3) : null),
+              esc(p.coteProjet !== null ? p.coteProjet.toFixed(3) : null),
+              esc(difference !== null ? difference.toFixed(3) : null),
+              esc(p.devers !== null ? p.devers.toString() : null),
+              esc(p.distance !== null ? p.distance.toString() : null),
+              // Only show observation on the Axe row for readability
+              esc(pointLabel === 'Axe' ? p.observation : ''),
+            ].join(';')
+          );
+        });
+      });
+
+      const csvContent = [headers, ...rows].join('\n');
+
+      // Write to documentDirectory
+      const fileName = `fiche-reception-${Date.now()}.csv`;
+      const destUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(destUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      // Share
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Export CSV', `Fichier enregistré ici :\n${destUri}`);
+        return;
+      }
+
+      await Sharing.shareAsync(destUri, {
+        mimeType: 'text/csv',
+        dialogTitle: 'Exporter le CSV',
+        UTI: 'public.comma-separated-values-text',
+      });
+    } catch (error) {
+      console.error('CSV export error:', error);
+      Alert.alert('Erreur', 'Échec de l\'export CSV : ' + String(error));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleExportLandXML = async () => {
+    try {
+      setIsGenerating(true);
+
+      // Each profile becomes a <CrossSect> with one <CrossSectSurf> containing 5 points.
+      // Horizontal offsets are nominal (ki-2) since real distances aren't captured.
+      const pointKeys: Array<'d1' | 'd2' | 'axe' | 'g1' | 'g2'> = ['d1', 'd2', 'axe', 'g1', 'g2'];
+
+      const crossSectsXml = profiles.map((p, idx) => {
+        const pntPairs = pointKeys
+          .map((key, ki) => {
+            const lecture = p[key];
+            const elev = pc !== null && lecture !== null ? calculateCotePratique(pc, lecture) : null;
+            if (elev === null) return null;
+            const x = (ki - 2).toFixed(3);
+            const y = elev.toFixed(3);
+            return `${x} ${y}`;
+          })
+          .filter((v): v is string => v !== null)
+          .join(' ');
+
+        const staSafe = (idx + 1).toFixed(3);
+        const nameSafe = escapeHtml(`Profil ${idx + 1}`);
+        const descSafe = escapeHtml(p.observation);
+
+        return [
+          `    <CrossSect sta="${staSafe}" name="${nameSafe}">`,
+          `      <CrossSectSurf name="Reception" desc="${descSafe}">`,
+          `        <PntList2D>${pntPairs}</PntList2D>`,
+          `      </CrossSectSurf>`,
+          `    </CrossSect>`,
+        ].join('\n');
+      }).join('\n');
+
+      const now = new Date().toISOString();
+      const dateStr = now.split('T')[0];
+      const timeStr = now.split('T')[1]?.split('.')[0] ?? '00:00:00';
+      const projName = escapeHtml(receptionNumber || 'Fiche de Reception');
+      const projDesc = escapeHtml(typeIntervention);
+
+      const xmlLines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<LandXML xmlns="http://www.landxml.org/schema/LandXML-1.2"',
+        `         date="${dateStr}" time="${timeStr}"`,
+        '         version="1.2">',
+        `  <Project name="${projName}">`,
+        `    <Desc>${projDesc}</Desc>`,
+        '  </Project>',
+        '  <CrossSects>',
+        crossSectsXml,
+        '  </CrossSects>',
+        '</LandXML>',
+      ];
+      const xmlContent = xmlLines.join('\n');
+
+      const fileName = `fiche-reception-${Date.now()}.xml`;
+      const destUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(destUri, xmlContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Export LandXML', `Fichier enregistre :\n${destUri}`);
+        return;
+      }
+
+      await Sharing.shareAsync(destUri, {
+        mimeType: 'application/xml',
+        dialogTitle: 'Exporter LandXML',
+        UTI: 'public.xml',
+      });
+    } catch (error) {
+      console.error('LandXML export error:', error);
+      Alert.alert('Erreur', "Echec export LandXML : " + String(error));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleReset = () => {
     Alert.alert(
       'Nouveau Projet',
@@ -543,6 +714,28 @@ export default function PreviewScreen() {
           >
             <Text className="text-xl mr-2">🖨️</Text>
             <Button.Label className="font-bold">Imprimer directement</Button.Label>
+          </Button>
+
+          {/* CSV Export */}
+          <Button
+            variant="outline"
+            size="lg"
+            isDisabled={isGenerating || profiles.length === 0}
+            onPress={handleExportCSV}
+          >
+            <Text className="text-xl mr-2">📊</Text>
+            <Button.Label className="font-bold">Exporter CSV (Excel)</Button.Label>
+          </Button>
+
+          {/* LandXML Export */}
+          <Button
+            variant="outline"
+            size="lg"
+            isDisabled={isGenerating || profiles.length === 0}
+            onPress={handleExportLandXML}
+          >
+            <Text className="text-xl mr-2">📐</Text>
+            <Button.Label className="font-bold">Exporter LandXML (CAO)</Button.Label>
           </Button>
         </View>
 

@@ -43,5 +43,43 @@ export interface ProjectState {
   addProfile: (profile: ProfileData) => void;
   updateProfile: (id: string, data: Partial<ProfileData>) => void;
   deleteProfile: (id: string) => void;
+  duplicateProfile: (id: string) => void;
   resetProject: () => void;
+}
+
+// ── Multi-project types ──────────────────────────────────────────────────────
+
+export type ProjectStatus = 'En cours' | 'Validé' | 'Archivé';
+
+/** A saved project record stored in the project list. */
+export interface SavedProject {
+  id: string;
+  name: string;
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+  status: ProjectStatus;
+  // All the survey data fields (mirrors the persisted slice of ProjectState)
+  receptionNumber: string;
+  vNumber: string;
+  pNumber: string;
+  date: string;
+  typeIntervention: string;
+  repere: string;
+  alt: number | null;
+  lectureArriere: number | null;
+  pc: number | null;
+  profiles: ProfileData[];
+}
+
+export interface ProjectsState {
+  projects: SavedProject[];
+  activeProjectId: string | null;
+
+  // Actions
+  createProject: (name: string) => string; // returns new id
+  openProject: (id: string) => void;
+  saveActiveProject: (data: Partial<Omit<SavedProject, 'id' | 'createdAt'>>) => void;
+  updateProjectStatus: (id: string, status: ProjectStatus) => void;
+  deleteProject: (id: string) => void;
+  archiveProject: (id: string) => void;
 }
