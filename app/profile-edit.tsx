@@ -1,6 +1,6 @@
 // app/profile-edit.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Text,
   TextInput,
@@ -152,6 +152,24 @@ export default function ProfileEditScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profiles, pc, updateProfile } = useProjectStore();
+
+  // Discard a never-filled profile when leaving the screen, so tapping
+  // "Ajouter" then going back doesn't leave a blank profile in the list.
+  useEffect(() => {
+    return () => {
+      const { profiles: current, deleteProfile } = useProjectStore.getState();
+      const p = current.find((x) => x.id === id);
+      if (
+        p &&
+        p.d1 === null && p.d2 === null && p.axe === null &&
+        p.g1 === null && p.g2 === null && p.coteProjet === null &&
+        p.distance === null && p.devers === null &&
+        p.observation.trim() === ''
+      ) {
+        deleteProfile(p.id);
+      }
+    };
+  }, [id]);
 
   const profileIndex = profiles.findIndex((p) => p.id === id);
   const profile = profiles[profileIndex];

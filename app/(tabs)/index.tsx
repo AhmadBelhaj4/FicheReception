@@ -15,6 +15,7 @@ import { useProjectStore } from '../../src/store/useProjectStore';
 import { StepBadge } from '../../components/ui/StepBadge';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { FieldCard } from '../../components/ui/FieldCard';
+import { parseLocalISODate, toLocalISODate } from '../../src/utils/date';
 
 export default function HeaderScreen() {
   const router = useRouter();
@@ -32,10 +33,10 @@ export default function HeaderScreen() {
     router.push('/reference' as Href);
   };
 
-  const currentDateObj = date ? new Date(date) : new Date();
+  const currentDateObj = (date && parseLocalISODate(date)) || new Date();
 
-  const formattedDate = date
-    ? new Date(date).toLocaleDateString('fr-FR', {
+  const formattedDate = date && parseLocalISODate(date)
+    ? currentDateObj.toLocaleDateString('fr-FR', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -152,7 +153,7 @@ export default function HeaderScreen() {
                 onChange={(event, selectedDate) => {
                   setShowPicker(Platform.OS === 'ios');
                   if (selectedDate) {
-                    const iso = selectedDate.toISOString().split('T')[0];
+                    const iso = toLocalISODate(selectedDate);
                     setHeader({ date: iso });
                   }
                 }}

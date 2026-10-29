@@ -15,6 +15,10 @@ This document serves as the permanent record of all identified bugs, root causes
 | **5** | **Data Loss on App Interruption / Kill**: Closing the app or background interruption wiped all survey inputs and profiles. | Zustand store was purely in-memory with no storage adapter. | Implemented custom `AsyncStorage` adapter in `src/store/storage.ts` and wrapped `useProjectStore` with Zustand's `persist` middleware with `partialize` (persisting only data, never action functions). | ✅ **RESOLVED** |
 | **6** | **Unused Template Boilerplate Clutter**: Default template files from `create-expo-app` remained in the repository. | Boilerplate files (`two.tsx`, `modal.tsx`, `EditScreenInfo.tsx`, `ExternalLink.tsx`, `StyledText.tsx`, `Themed.tsx`, `useClientOnlyValue.ts`, `Colors.ts`) were unused by the core application. | Completely removed all obsolete boilerplate files and their unused route declarations, keeping only active components and styles. | ✅ **RESOLVED** |
 | **7** | **Print Cache Unreadable (`copyAsync` Rejection)**: `ExponentFileSystem.copyAsync` failed with `java.io.IOException: Location 'file:///data/user/0/host.exp.exponent/cache/Print/....pdf' isn't readable`. | On Android in Expo Go, the print cache directory (`/cache/Print/`) is managed by the native Android print spooler service with isolated permissions, making it unreadable by `ExponentFileSystem.copyAsync`. | Updated `Print.printToFileAsync({ html, base64: true })` to capture the in-memory Base64 PDF directly, then wrote it directly to `FileSystem.documentDirectory` using `FileSystem.writeAsStringAsync(destUri, base64, { encoding: EncodingType.Base64 })`. Completely avoids reading from the inaccessible print cache. | ✅ **RESOLVED** |
+| **8** | **Unescaped user text in PDF HTML**: `<`, `&` or quotes in observation/repère/etc. break or inject into the generated PDF. | Template literals interpolated raw strings. | Added `src/utils/html.ts` (`escapeHtml`) and applied it to all free-text fields in `preview.tsx`. | ✅ **RESOLVED** (unverified on device) |
+| **9** | **Stale / UTC-shifted date**: reset reused the date from app launch; `toISOString()` could shift the picked day. | `initialState` evaluated once; UTC conversion. | Added `src/utils/date.ts` (local-time helpers); store builds a fresh initial state on reset; index and preview use the helpers. | ✅ **RESOLVED** (unverified on device) |
+| **10** | **Blank profile left behind**: tapping "Ajouter" then going back kept an empty profile. | Profile is created in the store before the edit screen opens. | `profile-edit.tsx` removes the profile on unmount if every field is empty. | ✅ **RESOLVED** (unverified on device) |
+| **11** | **No store migration path**. | `persist` had `version: 1` but no `migrate`. | Added a `migrate` stub in `useProjectStore.ts`; bump `version` there on schema changes. | ✅ **RESOLVED** |
 
 ---
 
@@ -151,3 +155,18 @@ FicheReception/
 
 - **TypeScript Compilation**: `npx tsc --noEmit` passed with **0 errors**.
 - **All Reported Bugs**: Documented, analyzed, resolved, and logged in this tracker.
+
+---
+
+## 7. Open Backlog (prioritised)
+
+1. PDF header: add official institutional lines (République Tunisienne / Travaux de réhabilitation du quartier Ennour / Commune de Kasserine).
+2. PDF pagination: `page-break-inside: avoid` per 5-row profile and repeated `thead` on each page.
+3. Make the point order consistent (UI: D2, D1, Axe, G1, G2 vs PDF: D1, D2, Axe, G1, G2).
+4. Tolerance (± cm) indicator per point and sanity checks on readings (e.g. 15.300 typed as 1.530, jumps > 50 cm).
+5. Jest tests for `src/utils/calculations.ts`.
+6. Inspect `RECEPTION TN .xlsx` for exact tolerances/rules.
+7. Refresh `PROJECT_DOCUMENTATION_A_TO_Z.md` (stale: persistence, template files, step count) and regenerate `firstoutput.pdf`.
+8. Roadmap features: see `recommendations.md` (multi-project, backup, signatures, CSV, photos, GPS, branding).
+
+> Note: items 8–11 above were implemented without being able to run `tsc`/`expo lint` (npm registry unreachable in that session). Run `npx tsc --noEmit && npx expo lint` before merging.
