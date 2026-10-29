@@ -14,6 +14,10 @@ import { useProjectStore } from '../src/store/useProjectStore';
 import {
   calculateCotePratique,
   calculateDifference,
+  checkDifference,
+  checkReading,
+  getConformity,
+  DEFAULT_TOLERANCE_M,
 } from '../src/utils/calculations';
 
 // ─── NumInput ────────────────────────────────────────────────────────────────
@@ -140,7 +144,8 @@ function ResultLine({
       </Text>
       <Text className={`${diffColor} text-xs text-center flex-1 font-bold`}>
         {diff !== null
-          ? (diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3))
+          ? (diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3)) +
+            (getConformity(diff) === 'ok' ? ' ✓' : ' ⚠')
           : '–'}
       </Text>
     </View>
@@ -202,6 +207,19 @@ export default function ProfileEditScreen() {
   const diffAxe = profile.coteProjet !== null && coteAxe !== null ? calculateDifference(profile.coteProjet, coteAxe) : null;
   const diffG1  = profile.coteProjet !== null && coteG1  !== null ? calculateDifference(profile.coteProjet, coteG1)  : null;
   const diffG2  = profile.coteProjet !== null && coteG2  !== null ? calculateDifference(profile.coteProjet, coteG2)  : null;
+
+  // Sanity checks: label each warning with its point, de-duplicated.
+  const warnings: string[] = [];
+  const addWarning = (label: string, msg: string | null) => {
+    if (msg) warnings.push(`${label} : ${msg}`);
+  };
+  ([['D2', profile.d2, diffD2], ['D1', profile.d1, diffD1], ['Axe', profile.axe, diffAxe],
+    ['G1', profile.g1, diffG1], ['G2', profile.g2, diffG2]] as const).forEach(
+    ([label, reading, diff]) => {
+      addWarning(label, checkReading(reading));
+      addWarning(label, checkDifference(diff));
+    }
+  );
 
   return (
     <KeyboardAwareScrollView
@@ -344,7 +362,21 @@ export default function ProfileEditScreen() {
           <ResultLine label="Axe" isAxe lecture={profile.axe} cote={coteAxe} diff={diffAxe} />
           <ResultLine label="G1" lecture={profile.g1} cote={coteG1} diff={diffG1} />
           <ResultLine label="G2" lecture={profile.g2} cote={coteG2} diff={diffG2} />
+          <Text className="text-slate-500 text-xs px-4 py-2">
+            ✓ conforme (± {(DEFAULT_TOLERANCE_M * 100).toFixed(0)} cm) · ⚠ hors tolérance
+          </Text>
         </View>
+
+        {warnings.length > 0 && (
+          <View className="bg-amber-400/10 rounded-2xl p-4 mb-3 border border-amber-400/40">
+            <Text className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-2">
+              Vérifications
+            </Text>
+            {warnings.map((w) => (
+              <Text key={w} className="text-amber-300 text-xs mb-1">• {w}</Text>
+            ))}
+          </View>
+        )}
 
         {/* ── Section 4: Données complémentaires ── */}
         <View className="bg-slate-800 rounded-2xl p-4 mb-5 border border-slate-700">

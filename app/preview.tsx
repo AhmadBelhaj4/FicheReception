@@ -81,6 +81,7 @@ export default function PreviewScreen() {
         const profileBg = idx % 2 === 0 ? '' : 'style="background-color: #f9fafb;"';
 
         return `
+          <tbody class="profile">
           <tr ${profileBg}>
             <td class="center bold border-b" rowspan="5">${idx + 1}</td>
             <td class="center">D1</td>
@@ -115,6 +116,7 @@ export default function PreviewScreen() {
             <td class="center">${formatNum(cpG2)}</td>
             <td class="center">${formatDiff(diffG2)}</td>
           </tr>
+          </tbody>
         `;
       })
       .join('');
@@ -250,6 +252,11 @@ export default function PreviewScreen() {
             margin-bottom: 3px;
           }
           /* ── Nota ── */
+          /* ── Pagination: never split a profile across pages ── */
+          thead { display: table-header-group; }
+          tbody.profile { page-break-inside: avoid; break-inside: avoid; }
+          tr { page-break-inside: avoid; break-inside: avoid; }
+          .sig-table, .nota { page-break-inside: avoid; break-inside: avoid; }
           .nota {
             margin-top: 6px;
             font-size: 8.5px;
@@ -259,7 +266,12 @@ export default function PreviewScreen() {
         </style>
       </head>
       <body>
-        <div class="institution">AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE</div>
+        <div class="institution">
+          RÉPUBLIQUE TUNISIENNE<br>
+          AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE<br>
+          TRAVAUX DE RÉHABILITATION DU QUARTIER ENNOUR<br>
+          DANS LA COMMUNE DE KASSERINE
+        </div>
 
         <div class="title-box">
           <h1>FICHE DE RÉCEPTION TOPOGRAPHIQUE</h1>
@@ -301,6 +313,7 @@ export default function PreviewScreen() {
           <thead>
             <tr>
               <th rowspan="2" style="width:5%;">N°<br>PROFIL</th>
+              <th rowspan="2" style="width:4%;">POINT</th>
               <th rowspan="2" style="width:8%;">LECTURE AV<br>(m)</th>
               <th rowspan="2" style="width:10%;">COTE<br>RÉCEPTION<br>(PRATIQUE)</th>
               <th rowspan="2" style="width:10%;">COTE PROJET<br>(THÉORIQUE)</th>
@@ -309,15 +322,14 @@ export default function PreviewScreen() {
               <th rowspan="2">OBSERVATION /<br>OBSTACLE</th>
             </tr>
           </thead>
+          ${rowsHtml || `
           <tbody>
-            ${rowsHtml || `
-              <tr>
-                <td colspan="7" class="center" style="padding: 12px; font-style: italic; color: #666;">
-                  Aucun profil saisi.
-                </td>
-              </tr>
-            `}
-          </tbody>
+            <tr>
+              <td colspan="8" class="center" style="padding: 12px; font-style: italic; color: #666;">
+                Aucun profil saisi.
+              </td>
+            </tr>
+          </tbody>`}
         </table>
 
         <div class="nota">

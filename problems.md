@@ -19,6 +19,9 @@ This document serves as the permanent record of all identified bugs, root causes
 | **9** | **Stale / UTC-shifted date**: reset reused the date from app launch; `toISOString()` could shift the picked day. | `initialState` evaluated once; UTC conversion. | Added `src/utils/date.ts` (local-time helpers); store builds a fresh initial state on reset; index and preview use the helpers. | ✅ **RESOLVED** (unverified on device) |
 | **10** | **Blank profile left behind**: tapping "Ajouter" then going back kept an empty profile. | Profile is created in the store before the edit screen opens. | `profile-edit.tsx` removes the profile on unmount if every field is empty. | ✅ **RESOLVED** (unverified on device) |
 | **11** | **No store migration path**. | `persist` had `version: 1` but no `migrate`. | Added a `migrate` stub in `useProjectStore.ts`; bump `version` there on schema changes. | ✅ **RESOLVED** |
+| **12** | **PDF table header misaligned**: header had no column for the point label (D1…G2), so every title sat one column left of its data. | Missing `<th>` for the label column. | Added a `POINT` header; empty-state `colspan` set to 8. | ✅ **RESOLVED** (verified in headless Chromium) |
+| **13** | **PDF header & pagination**: only one institutional line; profiles could split across pages. | Template. | Official 4-line header; each profile in its own `<tbody>` with `page-break-inside: avoid`; `thead` repeats. | ✅ **RESOLVED** (verified in headless Chromium, 20 profiles → 3 pages) |
+| **14** | **No tolerance / sanity checks, no tests.** | Not implemented. | `calculations.ts`: `getConformity` (±2 cm default), `checkReading`, `checkDifference`; ✓/⚠ and a "Vérifications" card on the profile edit screen; 8 tests via `npm test` (Node built-in runner). | ✅ **RESOLVED** (UI unverified on device) |
 
 ---
 
@@ -160,13 +163,8 @@ FicheReception/
 
 ## 7. Open Backlog (prioritised)
 
-1. PDF header: add official institutional lines (République Tunisienne / Travaux de réhabilitation du quartier Ennour / Commune de Kasserine).
-2. PDF pagination: `page-break-inside: avoid` per 5-row profile and repeated `thead` on each page.
-3. Make the point order consistent (UI: D2, D1, Axe, G1, G2 vs PDF: D1, D2, Axe, G1, G2).
-4. Tolerance (± cm) indicator per point and sanity checks on readings (e.g. 15.300 typed as 1.530, jumps > 50 cm).
-5. Jest tests for `src/utils/calculations.ts`.
-6. Inspect `RECEPTION TN .xlsx` for exact tolerances/rules.
-7. Refresh `PROJECT_DOCUMENTATION_A_TO_Z.md` (stale: persistence, template files, step count) and regenerate `firstoutput.pdf`.
-8. Roadmap features: see `recommendations.md` (multi-project, backup, signatures, CSV, photos, GPS, branding).
+1. Make tolerance configurable per project (currently constant ±2 cm in `DEFAULT_TOLERANCE_M`) — check `RECEPTION TN .xlsx` for the real rule.
+2. Consider matching the UI input order to the form (UI: D2, D1, Axe, G1, G2 follows the physical left→right order on the ground; PDF/form: D1, D2, Axe, G1, G2). Left unchanged deliberately.
+3. Roadmap features: see `recommendations.md` (multi-project, JSON backup, signatures, CSV, photos, GPS, branding).
 
-> Note: items 8–11 above were implemented without being able to run `tsc`/`expo lint` (npm registry unreachable in that session). Run `npx tsc --noEmit && npx expo lint` before merging.
+> Items 8–14 were implemented without being able to run `tsc`/`expo lint` (npm registry unreachable in that session). Run `npx tsc --noEmit && npx expo lint` before merging.
