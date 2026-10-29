@@ -167,7 +167,7 @@ export default function HeaderScreen() {
           <View className="flex-row items-center gap-2 mb-4">
             <View className="w-1 h-5 bg-amber-400 rounded-full" />
             <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
-              {"Type d\u2019intervention"}
+              {"Type d'intervention"}
             </Text>
           </View>
 
@@ -202,6 +202,28 @@ export default function HeaderScreen() {
           </Button.Label>
           <Text className="text-white text-lg ml-1">→</Text>
         </Button>
+
+        {/* ── Bottom links row ── */}
+        <View className="flex-row gap-3 mt-3">
+          <Button
+            variant="outline"
+            size="md"
+            onPress={() => router.push('/projects' as Href)}
+            className="flex-1"
+          >
+            <Text className="mr-2 text-base">🏗️</Text>
+            <Button.Label className="font-bold text-slate-300">Chantiers</Button.Label>
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
+            onPress={() => router.push('/settings' as Href)}
+            className="flex-1"
+          >
+            <Text className="mr-2 text-base">⚙️</Text>
+            <Button.Label className="font-bold text-slate-300">Paramètres</Button.Label>
+          </Button>
+        </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

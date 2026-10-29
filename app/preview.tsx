@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   Text,
   View,
@@ -10,14 +11,18 @@ import { useRouter } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import { escapeHtml } from '../src/utils/html';
 import { formatDateFR } from '../src/utils/date';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
+import { useSettingsStore } from '../src/store/useSettingsStore';
+import { useProjectsStore } from '../src/store/useProjectsStore';
 import {
   calculateCotePratique,
   calculateDifference,
+  getConformity,
 } from '../src/utils/calculations';
 import { ProfileData } from '../src/types';
 
@@ -36,15 +41,59 @@ export default function PreviewScreen() {
     lectureArriere,
     pc,
     profiles,
+    logoClient,
+    logoBureau,
+    setLogos,
     resetProject,
   } = useProjectStore();
 
+  const { logoBase64: enterpriseLogo, toleranceM } = useSettingsStore();
+  const { saveOrUpdateProject } = useProjectsStore();
+
   const formattedDate = formatDateFR(date);
 
-  // ── HTML TEMPLATE — UNTOUCHED ──────────────────────────────────────────────
-  // Generate HTML for the standard Fiche de Réception Topographique
-  // Layout: readings stacked vertically per profile (5 rows per profile),
-  // with rowspan on N°, Cote Projet, Dévers, Observation columns.
+  // ─── LOGO PICKERS ──────────────────────────────────────────────────────────
+  const handlePickLogo = async (target: 'client' | 'bureau') => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission requise',
+        "L'accès à la galerie est nécessaire pour sélectionner un logo."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      let dataUri: string | null = null;
+      if (asset.base64) {
+        const uri = asset.uri.toLowerCase();
+        const mime = uri.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        dataUri = `data:${mime};base64,${asset.base64}`;
+      } else if (asset.uri) {
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        dataUri = `data:image/jpeg;base64,${base64}`;
+      }
+      if (dataUri) {
+        if (target === 'client') {
+          setLogos({ logoClient: dataUri });
+        } else {
+          setLogos({ logoBureau: dataUri });
+        }
+      }
+    }
+  };
+
+  // ─── HTML TEMPLATE (OFFICIAL 3-COLUMN HEADER MATCHING REAL FORM) ───────────
   const generateHtml = (): string => {
     const pcVal = pc !== null ? pc.toFixed(3) : '-';
     const altVal = alt !== null ? alt.toFixed(3) : '-';
@@ -55,8 +104,10 @@ export default function PreviewScreen() {
     const formatDiff = (diff: number | null) => {
       if (diff === null) return '';
       const val = diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3);
-      const color = diff > 0 ? '#15803d' : diff < 0 ? '#b91c1c' : '#334155';
-      return `<span style="color: ${color}; font-weight: bold;">${val}</span>`;
+      const isOk = getConformity(diff, toleranceM) === 'ok';
+      const mark = isOk ? ' ✓' : ' ⚠';
+      const color = isOk ? '#15803d' : '#b91c1c';
+      return `<span style="color: ${color}; font-weight: bold;">${val}${mark}</span>`;
     };
 
     const rowsHtml = profiles
@@ -121,6 +172,17 @@ export default function PreviewScreen() {
       })
       .join('');
 
+    // Logos rendering
+    const clientLogoImg = logoClient
+      ? `<img src="${logoClient}" class="header-logo" alt="Logo Client" />`
+      : '';
+    const enterpriseLogoImg = enterpriseLogo
+      ? `<img src="${enterpriseLogo}" class="header-logo" alt="Logo Entreprise" />`
+      : '';
+    const bureauLogoImg = logoBureau
+      ? `<img src="${logoBureau}" class="header-logo" alt="Logo Bureau" />`
+      : '';
+
     return `
       <!DOCTYPE html>
       <html lang="fr">
@@ -145,23 +207,67 @@ export default function PreviewScreen() {
             padding: 0;
             font-size: 10px;
           }
-          /* ── Institutional header ── */
-          .institution {
+          /* ── 3-Column Header Layout (Matches Official Document) ── */
+          .top-header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5px;
+          }
+          .top-header-table td {
+            border: none;
+            vertical-align: middle;
+            padding: 0 4px;
+          }
+          .top-header-left {
+            width: 25%;
+            text-align: left;
+            white-space: nowrap;
+          }
+          .top-header-center {
+            width: 50%;
             text-align: center;
-            margin-bottom: 4px;
-            font-size: 9px;
+          }
+          .top-header-right {
+            width: 25%;
+            text-align: right;
+            white-space: nowrap;
+          }
+          .header-logo {
+            max-height: 48px;
+            max-width: 90px;
+            object-fit: contain;
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 3px;
+          }
+          /* ── Institutional double box ── */
+          .institution-box {
+            display: inline-block;
+            border: 1.5px solid #000;
+            width: 100%;
+            font-size: 8.5px;
             font-weight: bold;
+            line-height: 1.35;
+          }
+          .inst-top {
+            padding: 3px 6px;
+            border-bottom: 1.5px solid #000;
+            text-transform: uppercase;
+          }
+          .inst-bottom {
+            padding: 3px 6px;
+            text-transform: uppercase;
           }
           /* ── Form title ── */
           .title-box {
             text-align: center;
             border: 2px solid #000;
-            padding: 5px;
-            margin-bottom: 6px;
+            padding: 4px;
+            margin-bottom: 5px;
           }
           .title-box h1 {
             margin: 0;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             letter-spacing: 0.5px;
             text-transform: uppercase;
@@ -170,8 +276,8 @@ export default function PreviewScreen() {
           .header-block {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 10px;
+            margin-bottom: 5px;
+            font-size: 9.5px;
           }
           .header-block td {
             border: 1px solid #000;
@@ -187,8 +293,8 @@ export default function PreviewScreen() {
           .ref-block {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 10px;
+            margin-bottom: 5px;
+            font-size: 9.5px;
           }
           .ref-block td {
             border: 1px solid #000;
@@ -206,7 +312,7 @@ export default function PreviewScreen() {
           .data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9.5px;
+            font-size: 9px;
           }
           .data-table th, .data-table td {
             border: 1px solid #000;
@@ -216,11 +322,8 @@ export default function PreviewScreen() {
             background-color: #d0d0d0;
             text-align: center;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 8.5px;
             vertical-align: middle;
-          }
-          .data-table th.sub-header {
-            background-color: #e8e8e8;
           }
           .center { text-align: center; vertical-align: middle; }
           .left { text-align: left; vertical-align: middle; padding-left: 4px; }
@@ -230,16 +333,16 @@ export default function PreviewScreen() {
           /* Thick bottom border between profiles */
           .profile-last-row td, .border-b { border-bottom: 2px solid #444 !important; }
           .alt-profile td { background-color: #f9fafb; }
-          /* ── Signature block ── */
+          /* ── Signature block (Official paper signature boxes) ── */
           .sig-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 8px;
           }
           .sig-table td {
             border: 1px solid #000;
             width: 33.33%;
-            height: 55px;
+            height: 60px;
             vertical-align: top;
             padding: 4px 6px;
             font-size: 9px;
@@ -251,14 +354,13 @@ export default function PreviewScreen() {
             padding-bottom: 3px;
             margin-bottom: 3px;
           }
-          /* ── Nota ── */
           /* ── Pagination: never split a profile across pages ── */
           thead { display: table-header-group; }
           tbody.profile { page-break-inside: avoid; break-inside: avoid; }
           tr { page-break-inside: avoid; break-inside: avoid; }
           .sig-table, .nota { page-break-inside: avoid; break-inside: avoid; }
           .nota {
-            margin-top: 6px;
+            margin-top: 5px;
             font-size: 8.5px;
             color: #333;
           }
@@ -266,12 +368,30 @@ export default function PreviewScreen() {
         </style>
       </head>
       <body>
-        <div class="institution">
-          RÉPUBLIQUE TUNISIENNE<br>
-          AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE<br>
-          TRAVAUX DE RÉHABILITATION DU QUARTIER ENNOUR<br>
-          DANS LA COMMUNE DE KASSERINE
-        </div>
+        <!-- 3-Column Official Top Header with Logos -->
+        <table class="top-header-table">
+          <tr>
+            <td class="top-header-left">
+              ${clientLogoImg}
+              ${enterpriseLogoImg}
+            </td>
+            <td class="top-header-center">
+              <div class="institution-box">
+                <div class="inst-top">
+                  RÉPUBLIQUE TUNISIENNE<br>
+                  AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE
+                </div>
+                <div class="inst-bottom">
+                  TRAVAUX DE RÉHABILITATION DU QUARTIER ENNOUR<br>
+                  DANS LA COMMUNE DE KASSERINE
+                </div>
+              </div>
+            </td>
+            <td class="top-header-right">
+              ${bureauLogoImg}
+            </td>
+          </tr>
+        </table>
 
         <div class="title-box">
           <h1>FICHE DE RÉCEPTION TOPOGRAPHIQUE</h1>
@@ -354,7 +474,6 @@ export default function PreviewScreen() {
       </html>
     `;
   };
-  // ── END HTML TEMPLATE ──────────────────────────────────────────────────────
 
   const handlePrint = async () => {
     try {
@@ -373,7 +492,6 @@ export default function PreviewScreen() {
       setIsGenerating(true);
       const html = generateHtml();
 
-      // 1. Generate PDF with Base64 output to avoid Android scoped cache permission issue
       const { uri: cacheUri, base64 } = await Print.printToFileAsync({
         html,
         base64: true,
@@ -382,7 +500,6 @@ export default function PreviewScreen() {
       let shareUri = cacheUri;
 
       if (base64) {
-        // 2. Write directly to documentDirectory via Base64 (100% accessible to FileProvider)
         const fileName = `fiche-reception-${Date.now()}.pdf`;
         const destUri = `${FileSystem.documentDirectory}${fileName}`;
         await FileSystem.writeAsStringAsync(destUri, base64, {
@@ -391,7 +508,6 @@ export default function PreviewScreen() {
         shareUri = destUri;
       }
 
-      // 3. Check sharing availability
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
         Alert.alert(
@@ -401,7 +517,6 @@ export default function PreviewScreen() {
         return;
       }
 
-      // 4. Share from documentDirectory URI — works on both iOS and Android
       await Sharing.shareAsync(shareUri, {
         UTI: 'com.adobe.pdf',
         mimeType: 'application/pdf',
@@ -413,6 +528,118 @@ export default function PreviewScreen() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // ─── CSV EXPORT (WITH UTF-8 BOM FOR PERFECT EXCEL DISPLAY) ────────────────
+  const handleExportCSV = async () => {
+    try {
+      setIsGenerating(true);
+
+      const headers = [
+        'Profil N°',
+        'Point',
+        'Lecture AV (m)',
+        'Cote Pratique (m)',
+        'Cote Projet (m)',
+        'Différence (m)',
+        'Dévers (%)',
+        'Distance (m)',
+        'Observation',
+      ].join(';');
+
+      const points = ['D1', 'D2 (F)', 'Axe', 'G1', 'G2 (F)'] as const;
+      type PointKey = 'd1' | 'd2' | 'axe' | 'g1' | 'g2';
+      const pointKeys: PointKey[] = ['d1', 'd2', 'axe', 'g1', 'g2'];
+
+      const rows: string[] = [];
+
+      profiles.forEach((p, idx) => {
+        points.forEach((pointLabel, pIdx) => {
+          const key = pointKeys[pIdx];
+          const lecture = p[key];
+          const cotePratique =
+            pc !== null && lecture !== null ? calculateCotePratique(pc, lecture) : null;
+          const difference =
+            p.coteProjet !== null && cotePratique !== null
+              ? calculateDifference(p.coteProjet, cotePratique)
+              : null;
+
+          const esc = (v: string | number | null) => {
+            if (v === null || v === undefined) return '';
+            const str = String(v);
+            if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          };
+
+          rows.push(
+            [
+              esc(idx + 1),
+              esc(pointLabel),
+              esc(lecture !== null ? lecture.toFixed(3) : null),
+              esc(cotePratique !== null ? cotePratique.toFixed(3) : null),
+              esc(p.coteProjet !== null ? p.coteProjet.toFixed(3) : null),
+              esc(difference !== null ? difference.toFixed(3) : null),
+              esc(p.devers !== null ? p.devers.toString() : null),
+              esc(p.distance !== null ? p.distance.toString() : null),
+              esc(pointLabel === 'Axe' ? p.observation : ''),
+            ].join(';')
+          );
+        });
+      });
+
+      // Prepend UTF-8 BOM (\uFEFF) so Excel natively recognizes accents
+      const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n');
+
+      const fileName = `fiche-reception-${Date.now()}.csv`;
+      const destUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(destUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Export CSV', `Fichier enregistré ici :\n${destUri}`);
+        return;
+      }
+
+      await Sharing.shareAsync(destUri, {
+        mimeType: 'text/csv',
+        dialogTitle: 'Exporter le CSV',
+        UTI: 'public.comma-separated-values-text',
+      });
+    } catch (error) {
+      console.error('CSV export error:', error);
+      Alert.alert('Erreur', "Échec de l'export CSV : " + String(error));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // ─── SAVE TO CHANTIERS ────────────────────────────────────────────────────
+  const handleSaveChantier = () => {
+    const id = saveOrUpdateProject({
+      receptionNumber,
+      vNumber,
+      pNumber,
+      date,
+      typeIntervention,
+      repere,
+      alt,
+      lectureArriere,
+      pc,
+      profiles,
+      logoClient,
+      logoBureau,
+      status: 'En cours',
+    });
+
+    const saved = useProjectsStore.getState().projects.find((p) => p.id === id);
+    Alert.alert(
+      'Chantier Enregistré ✓',
+      `Le chantier "${saved?.name || receptionNumber || 'Sans nom'}" a été sauvegardé avec succès dans Mes Chantiers.`
+    );
   };
 
   const handleReset = () => {
@@ -447,10 +674,10 @@ export default function PreviewScreen() {
             </Text>
           </View>
           <Text className="text-2xl font-black text-slate-50 text-center">
-            {"Aperçu & Exportation PDF"}
+            Aperçu & Exportation PDF
           </Text>
           <Text className="text-slate-400 text-sm text-center mt-1.5 px-4">
-            {"Vérifiez la synthèse ci-dessous avant d\u2019imprimer ou de partager la fiche officielle."}
+            Vérifiez la synthèse ci-dessous avant d’imprimer ou de partager la fiche officielle.
           </Text>
         </View>
 
@@ -483,7 +710,7 @@ export default function PreviewScreen() {
         </View>
 
         {/* ── 2. Données Topographiques ── */}
-        <View className="bg-slate-800 rounded-2xl p-5 mb-5 border border-slate-700">
+        <View className="bg-slate-800 rounded-2xl p-5 mb-4 border border-slate-700">
           <View className="flex-row items-center gap-2 mb-4">
             <View className="w-1 h-5 bg-emerald-400 rounded-full" />
             <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
@@ -512,9 +739,126 @@ export default function PreviewScreen() {
           </View>
         </View>
 
+        {/* ── 3. Logos du Chantier & Partenaires ── */}
+        <View className="bg-slate-800 rounded-2xl p-5 mb-5 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-4">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              3. Logos pour cette Fiche
+            </Text>
+          </View>
+          <Text className="text-slate-400 text-xs mb-4 leading-relaxed">
+            Positionnés autour du bloc officiel dans l’en-tête du PDF (Maître d’Ouvrage / Entreprise à gauche, Bureau de Contrôle à droite).
+          </Text>
+
+          {/* Logo Entreprise (Info) */}
+          <View className="bg-slate-900 rounded-xl p-3.5 mb-3 border border-slate-700">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 mr-3">
+                <Text className="text-slate-300 text-xs font-bold mb-0.5">Logo Entreprise (Gauche)</Text>
+                <Text className="text-slate-500 text-xs">
+                  {enterpriseLogo ? '✓ Défini dans les Paramètres' : 'Non défini (dans Paramètres)'}
+                </Text>
+              </View>
+              {enterpriseLogo ? (
+                <View className="bg-white rounded-lg p-1">
+                  <Image source={{ uri: enterpriseLogo }} style={{ width: 44, height: 28, resizeMode: 'contain' }} />
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Logo Client / ARRU */}
+          <View className="bg-slate-900 rounded-xl p-3.5 mb-3 border border-slate-700">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 mr-3">
+                <Text className="text-slate-300 text-xs font-bold mb-0.5">Logo Client / ARRU (Gauche)</Text>
+                <Text className="text-slate-500 text-xs">
+                  {logoClient ? '✓ Logo ajouté' : 'Optionnel'}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                {logoClient ? (
+                  <>
+                    <View className="bg-white rounded-lg p-1">
+                      <Image source={{ uri: logoClient }} style={{ width: 44, height: 28, resizeMode: 'contain' }} />
+                    </View>
+                    <Button
+                      variant="danger-soft"
+                      size="sm"
+                      isIconOnly
+                      onPress={() => setLogos({ logoClient: null })}
+                    >
+                      <Text className="text-red-400 font-bold text-xs">✕</Text>
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={() => handlePickLogo('client')}
+                  >
+                    <Button.Label className="font-bold text-xs">+ Choisir</Button.Label>
+                  </Button>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Logo Bureau de Contrôle / SOIT */}
+          <View className="bg-slate-900 rounded-xl p-3.5 border border-slate-700">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 mr-3">
+                <Text className="text-slate-300 text-xs font-bold mb-0.5">Logo Bureau de Contrôle (Droite)</Text>
+                <Text className="text-slate-500 text-xs">
+                  {logoBureau ? '✓ Logo ajouté' : 'Optionnel'}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                {logoBureau ? (
+                  <>
+                    <View className="bg-white rounded-lg p-1">
+                      <Image source={{ uri: logoBureau }} style={{ width: 44, height: 28, resizeMode: 'contain' }} />
+                    </View>
+                    <Button
+                      variant="danger-soft"
+                      size="sm"
+                      isIconOnly
+                      onPress={() => setLogos({ logoBureau: null })}
+                    >
+                      <Text className="text-red-400 font-bold text-xs">✕</Text>
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={() => handlePickLogo('bureau')}
+                  >
+                    <Button.Label className="font-bold text-xs">+ Choisir</Button.Label>
+                  </Button>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* ── Action buttons ── */}
         <View className="gap-3 mb-5">
-          {/* Primary: Share PDF */}
+          {/* Primary 1: Enregistrer dans Mes Chantiers */}
+          <Button
+            variant="outline"
+            size="lg"
+            onPress={handleSaveChantier}
+            className="border-amber-400/60 bg-amber-400/10"
+          >
+            <Text className="text-xl mr-2">💾</Text>
+            <Button.Label className="font-bold tracking-wide text-amber-300">
+              Enregistrer dans Mes Chantiers
+            </Button.Label>
+          </Button>
+
+          {/* Primary 2: Share PDF */}
           <Button
             variant="primary"
             size="lg"
@@ -543,6 +887,17 @@ export default function PreviewScreen() {
           >
             <Text className="text-xl mr-2">🖨️</Text>
             <Button.Label className="font-bold">Imprimer directement</Button.Label>
+          </Button>
+
+          {/* Secondary: CSV Export */}
+          <Button
+            variant="outline"
+            size="lg"
+            isDisabled={isGenerating || profiles.length === 0}
+            onPress={handleExportCSV}
+          >
+            <Text className="text-xl mr-2">📊</Text>
+            <Button.Label className="font-bold">Exporter CSV (Excel)</Button.Label>
           </Button>
         </View>
 
