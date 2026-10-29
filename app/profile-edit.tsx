@@ -1,6 +1,6 @@
 // app/profile-edit.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Text,
   TextInput,
@@ -14,6 +14,10 @@ import { useProjectStore } from '../src/store/useProjectStore';
 import {
   calculateCotePratique,
   calculateDifference,
+  checkDifference,
+  checkReading,
+  getConformity,
+  DEFAULT_TOLERANCE_M,
 } from '../src/utils/calculations';
 
 // ─── NumInput ────────────────────────────────────────────────────────────────
@@ -140,7 +144,8 @@ function ResultLine({
       </Text>
       <Text className={`${diffColor} text-xs text-center flex-1 font-bold`}>
         {diff !== null
-          ? (diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3))
+          ? (diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3)) +
+            (getConformity(diff) === 'ok' ? ' ✓' : ' ⚠')
           : '–'}
       </Text>
     </View>
@@ -152,6 +157,24 @@ export default function ProfileEditScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profiles, pc, updateProfile } = useProjectStore();
+
+  // Discard a never-filled profile when leaving the screen, so tapping
+  // "Ajouter" then going back doesn't leave a blank profile in the list.
+  useEffect(() => {
+    return () => {
+      const { profiles: current, deleteProfile } = useProjectStore.getState();
+      const p = current.find((x) => x.id === id);
+      if (
+        p &&
+        p.d1 === null && p.d2 === null && p.axe === null &&
+        p.g1 === null && p.g2 === null && p.coteProjet === null &&
+        p.distance === null && p.devers === null &&
+        p.observation.trim() === ''
+      ) {
+        deleteProfile(p.id);
+      }
+    };
+  }, [id]);
 
   const profileIndex = profiles.findIndex((p) => p.id === id);
   const profile = profiles[profileIndex];
@@ -184,6 +207,19 @@ export default function ProfileEditScreen() {
   const diffAxe = profile.coteProjet !== null && coteAxe !== null ? calculateDifference(profile.coteProjet, coteAxe) : null;
   const diffG1  = profile.coteProjet !== null && coteG1  !== null ? calculateDifference(profile.coteProjet, coteG1)  : null;
   const diffG2  = profile.coteProjet !== null && coteG2  !== null ? calculateDifference(profile.coteProjet, coteG2)  : null;
+
+  // Sanity checks: label each warning with its point, de-duplicated.
+  const warnings: string[] = [];
+  const addWarning = (label: string, msg: string | null) => {
+    if (msg) warnings.push(`${label} : ${msg}`);
+  };
+  ([['D2', profile.d2, diffD2], ['D1', profile.d1, diffD1], ['Axe', profile.axe, diffAxe],
+    ['G1', profile.g1, diffG1], ['G2', profile.g2, diffG2]] as const).forEach(
+    ([label, reading, diff]) => {
+      addWarning(label, checkReading(reading));
+      addWarning(label, checkDifference(diff));
+    }
+  );
 
   return (
     <KeyboardAwareScrollView
@@ -223,23 +259,23 @@ export default function ProfileEditScreen() {
             </Text>
           </View>
           <Text className="text-slate-500 text-xs mb-3">
-            Ordre standard terrain : Droite (D2, D1), Axe, Gauche (G1, G2)
+            Même ordre que la fiche officielle : D1, D2 (F), Axe, G1, G2 (F)
           </Text>
 
-          {/* D2, D1, Axe on one row */}
+          {/* D1, D2, Axe on one row (same order as the PDF) */}
           <View className="flex-row gap-2">
-            <View className="flex-1">
-              <NumInput
-                label="D2 (Ext D)"
-                value={profile.d2}
-                onChange={(v) => updateProfile(profile.id, { d2: v })}
-              />
-            </View>
             <View className="flex-1">
               <NumInput
                 label="D1 (Int D)"
                 value={profile.d1}
                 onChange={(v) => updateProfile(profile.id, { d1: v })}
+              />
+            </View>
+            <View className="flex-1">
+              <NumInput
+                label="D2 (Ext D)"
+                value={profile.d2}
+                onChange={(v) => updateProfile(profile.id, { d2: v })}
               />
             </View>
             <View className="flex-1">
@@ -321,12 +357,26 @@ export default function ProfileEditScreen() {
             <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Diff.</Text>
           </View>
 
-          <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
           <ResultLine label="D1" lecture={profile.d1} cote={coteD1} diff={diffD1} />
+          <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
           <ResultLine label="Axe" isAxe lecture={profile.axe} cote={coteAxe} diff={diffAxe} />
           <ResultLine label="G1" lecture={profile.g1} cote={coteG1} diff={diffG1} />
           <ResultLine label="G2" lecture={profile.g2} cote={coteG2} diff={diffG2} />
+          <Text className="text-slate-500 text-xs px-4 py-2">
+            ✓ conforme (± {(DEFAULT_TOLERANCE_M * 100).toFixed(0)} cm) · ⚠ hors tolérance
+          </Text>
         </View>
+
+        {warnings.length > 0 && (
+          <View className="bg-amber-400/10 rounded-2xl p-4 mb-3 border border-amber-400/40">
+            <Text className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-2">
+              Vérifications
+            </Text>
+            {warnings.map((w) => (
+              <Text key={w} className="text-amber-300 text-xs mb-1">• {w}</Text>
+            ))}
+          </View>
+        )}
 
         {/* ── Section 4: Données complémentaires ── */}
         <View className="bg-slate-800 rounded-2xl p-4 mb-5 border border-slate-700">

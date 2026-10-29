@@ -143,14 +143,12 @@ FicheReception/
 ├── app/
 │   ├── (tabs)/
 │   │   ├── _layout.tsx         # Tab container (tabs hidden for linear wizard flow)
-│   │   ├── index.tsx           # [Étape 1] Header / Chantier details & date
-│   │   └── two.tsx             # Unused template tab (hidden from tab bar)
+│   │   └── index.tsx           # [Étape 1] Header / Chantier details & date
 │   ├── _layout.tsx             # Root navigation stack with theme & headers
 │   ├── reference.tsx           # [Étape 2] Benchmark setup & live P.C. calculation
 │   ├── profiles.tsx            # [Étape 3] List of profiles with Remblai/Déblai badges
-│   ├── profile-edit.tsx        # [Étape 4] 5-point data entry, live diff calculation
-│   ├── preview.tsx             # [Étape 5] PDF generation, print & share engine
-│   ├── modal.tsx               # Standard modal screen
+│   ├── profile-edit.tsx        # Profile form: 5-point entry, live diff, tolerance & sanity checks
+│   ├── preview.tsx             # [Étape 4] PDF generation, print & share engine
 │   └── +not-found.tsx          # 404 handler
 ├── src/
 │   ├── store/
@@ -183,7 +181,7 @@ Here is an exhaustive catalog of all features implemented, tested, and confirmed
 | **Étape 2: Repère & P.C.** (`app/reference.tsx`) | Benchmark definition and collimation plane computation. | Text and decimal inputs with bulletproof decimal sanitization (prevents losing `.` when typing). Displays prominent blue card showing live $P.C. = \text{ALT} + \text{LAR}$. Prevents moving to Step 3 until $P.C.$ is valid. |
 | **Étape 3: Profiles Dashboard** (`app/profiles.tsx`) | Visual list of all measured cross-sections. | Displays profile cards (`PROFIL N° 1, 2...`), instant preview of Axe reading, Cote Projet, and colored difference badge (**+ Remblai** green vs **- Déblai** red). Delete confirmation dialogs with profile index awareness. Clean empty-state graphic when no profiles exist. |
 | **Étape 4: Profile Editor** (`app/profile-edit.tsx`) | Deep measurement entry for a single cross-section. | 5 numeric inputs (`D2`, `D1`, `Axe`, `G1`, `G2`) grouped logically by Right side, Centerline, and Left side. Separate `Cote Projet` input. Live calculation table displaying practical cote and difference on every keystroke. Secondary inputs for `Dévers (%)`, `Distance (m)`, and `Observation`. |
-| **Étape 5: PDF Generator** (`app/preview.tsx`) | Production-ready landscape A4 HTML-to-PDF compiler using `expo-print`. | Full landscape layout matching the institutional standard: Header, reference table, 5-row vertical profile blocks (`rowspan="5"`), colorized differences, official NOTA 1 & NOTA 2, and 3 signature blocks (*L'Entreprise Travaux, Bureau de Contrôle / Géomètre, Maître d'Ouvrage*). Direct print and native file share sheet. |
+| **Étape 4: PDF Generator** (`app/preview.tsx`) | Production-ready landscape A4 HTML-to-PDF compiler using `expo-print`. | Full landscape layout matching the institutional standard: Header, reference table, 5-row vertical profile blocks (`rowspan="5"`), colorized differences, official NOTA 1 & NOTA 2, and 3 signature blocks (*L'Entreprise Travaux, Bureau de Contrôle / Géomètre, Maître d'Ouvrage*). Direct print and native file share sheet. |
 
 ---
 
@@ -214,8 +212,8 @@ To make this app ready for commercial release on Google Play and Apple App Store
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   COMMERCIAL STORE GAP ANALYSIS                        │
 ├────────────────────────────┬───────────────────────────────────────────┤
-│ 1. DATA PERSISTENCE        │ Current: In-memory only (Lost on quit)    │
-│                            │ Needed: Local SQLite / WatermelonDB / MMKV│
+│ 1. DATA PERSISTENCE        │ Current: DONE (Zustand persist+AsyncStorage)│
+│                            │ Needed: backup/restore (JSON export)      │
 ├────────────────────────────┼───────────────────────────────────────────┤
 │ 2. PROJECT MANAGEMENT      │ Current: Single active project            │
 │                            │ Needed: Multi-chantier archive & drafts   │
@@ -234,8 +232,8 @@ To make this app ready for commercial release on Google Play and Apple App Store
 └────────────────────────────┴───────────────────────────────────────────┘
 ```
 
-### 6.1 Critical Architectural Deficit: Lack of Local Persistence
-- **The Problem**: Right now, the entire app state lives exclusively in RAM inside the Zustand store (`useProjectStore.ts`). If the user leaves the app to take a phone call on the job site and Android OS kills background memory, or if the battery dies, **all measurements are permanently lost**.
+### 6.1 Local Persistence — ✅ IMPLEMENTED (kept for history)
+- **Status**: Resolved — the store now persists to AsyncStorage (see `problems.md` #5). Original problem: the entire app state lived exclusively in RAM inside the Zustand store (`useProjectStore.ts`). If the user leaves the app to take a phone call on the job site and Android OS kills background memory, or if the battery dies, **all measurements are permanently lost**.
 - **The Solution Needed**: Integrate an offline-first storage engine (e.g., `AsyncStorage`, `react-native-mmkv`, or SQLite via `expo-sqlite`). Every keystroke in Step 1, 2, and 4 must auto-save locally within 100 milliseconds.
 
 ### 6.2 Missing Multi-Project / Multi-Chantier Manager
@@ -304,7 +302,7 @@ PHASE 1 (Current)           PHASE 2 (Beta Polish)       PHASE 3 (Commercial Laun
 - Used on live sites to discover real-world edge cases.
 
 ### Phase 2: Professionalization & Persistence (Pre-Launch)
-1. Add `expo-sqlite` or persistent storage layer so data is never lost.
+1. ~~Persistent storage layer~~ (done: Zustand `persist` + AsyncStorage). Next: JSON backup/restore.
 2. Build Multi-Project manager (save, load, list, delete drafts).
 3. Implement `xlsx` export alongside PDF.
 4. Support multi-page PDF pagination with repeating table headers.
@@ -352,9 +350,13 @@ To ensure future development aligns with your vision, please review the followin
 - [x] Color coding strictly adheres to conventions: **Green = Remblai** ($\Delta Z > 0$), **Red = Déblai** ($\Delta Z < 0$).
 - [x] 5-point cross-section data model implemented.
 - [x] PDF template uses vertical sub-row layout matching official ARRUT form.
-- [ ] SQLite local persistence implementation (Priority 1).
+- [x] Local persistence (Zustand persist + AsyncStorage).
 - [ ] Multi-project management dashboard (Priority 2).
-- [ ] Multi-page printing and table split rules (Priority 3).
+- [x] Multi-page printing: profiles never split across pages, header repeats (verified in headless Chromium).
+- [x] Official institutional header, tolerance (±2 cm) indicators and reading sanity checks.
 - [ ] Play Store / App Store packaging and production build configurations (Priority 4).
 
 *(This document serves as the permanent, living single source of truth for the project.)*
+
+
+> Last refreshed on branch `claude/fixes-batch-1`. See `problems.md` for the issue log and open backlog.

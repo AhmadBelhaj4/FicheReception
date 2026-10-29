@@ -10,6 +10,8 @@ import { useRouter } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import { escapeHtml } from '../src/utils/html';
+import { formatDateFR } from '../src/utils/date';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
@@ -37,13 +39,7 @@ export default function PreviewScreen() {
     resetProject,
   } = useProjectStore();
 
-  const formattedDate = date
-    ? new Date(date).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    : '';
+  const formattedDate = formatDateFR(date);
 
   // ── HTML TEMPLATE — UNTOUCHED ──────────────────────────────────────────────
   // Generate HTML for the standard Fiche de Réception Topographique
@@ -85,6 +81,7 @@ export default function PreviewScreen() {
         const profileBg = idx % 2 === 0 ? '' : 'style="background-color: #f9fafb;"';
 
         return `
+          <tbody class="profile">
           <tr ${profileBg}>
             <td class="center bold border-b" rowspan="5">${idx + 1}</td>
             <td class="center">D1</td>
@@ -93,7 +90,7 @@ export default function PreviewScreen() {
             <td class="center bold border-b" rowspan="5">${coteProjetDisplay}</td>
             <td class="center">${formatDiff(diffD1)}</td>
             <td class="center border-b" rowspan="5">${deversDisplay}</td>
-            <td class="left border-b" rowspan="5">${obsDisplay}</td>
+            <td class="left border-b" rowspan="5">${escapeHtml(obsDisplay)}</td>
           </tr>
           <tr ${profileBg}>
             <td class="center">D2 (F)</td>
@@ -119,6 +116,7 @@ export default function PreviewScreen() {
             <td class="center">${formatNum(cpG2)}</td>
             <td class="center">${formatDiff(diffG2)}</td>
           </tr>
+          </tbody>
         `;
       })
       .join('');
@@ -254,6 +252,11 @@ export default function PreviewScreen() {
             margin-bottom: 3px;
           }
           /* ── Nota ── */
+          /* ── Pagination: never split a profile across pages ── */
+          thead { display: table-header-group; }
+          tbody.profile { page-break-inside: avoid; break-inside: avoid; }
+          tr { page-break-inside: avoid; break-inside: avoid; }
+          .sig-table, .nota { page-break-inside: avoid; break-inside: avoid; }
           .nota {
             margin-top: 6px;
             font-size: 8.5px;
@@ -263,7 +266,12 @@ export default function PreviewScreen() {
         </style>
       </head>
       <body>
-        <div class="institution">AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE</div>
+        <div class="institution">
+          RÉPUBLIQUE TUNISIENNE<br>
+          AGENCE DE RÉHABILITATION ET DE RÉNOVATION URBAINE<br>
+          TRAVAUX DE RÉHABILITATION DU QUARTIER ENNOUR<br>
+          DANS LA COMMUNE DE KASSERINE
+        </div>
 
         <div class="title-box">
           <h1>FICHE DE RÉCEPTION TOPOGRAPHIQUE</h1>
@@ -272,17 +280,17 @@ export default function PreviewScreen() {
         <table class="header-block">
           <tr>
             <td class="lbl" style="width:12%;">RÉCEPTION N° :</td>
-            <td style="width:22%;"><strong>${receptionNumber || '…'}</strong></td>
+            <td style="width:22%;"><strong>${escapeHtml(receptionNumber) || '…'}</strong></td>
             <td class="lbl" style="width:6%;">V N° :</td>
-            <td style="width:10%;"><strong>${vNumber || '…'}</strong></td>
+            <td style="width:10%;"><strong>${escapeHtml(vNumber) || '…'}</strong></td>
             <td class="lbl" style="width:6%;">P N° :</td>
-            <td style="width:14%;"><strong>${pNumber || '…'}</strong></td>
+            <td style="width:14%;"><strong>${escapeHtml(pNumber) || '…'}</strong></td>
             <td class="lbl" style="width:6%;">Date :</td>
             <td style="width:24%;"><strong>${formattedDate || '…'}</strong></td>
           </tr>
           <tr>
             <td class="lbl">TYPE D'INTERVENTION :</td>
-            <td colspan="7">${typeIntervention || '…'}</td>
+            <td colspan="7">${escapeHtml(typeIntervention) || '…'}</td>
           </tr>
         </table>
 
@@ -294,7 +302,7 @@ export default function PreviewScreen() {
             <td class="lbl" style="width:20%; background:#c8c8c8;">P.C.</td>
           </tr>
           <tr>
-            <td class="val">${repere || '…'}</td>
+            <td class="val">${escapeHtml(repere) || '…'}</td>
             <td>${altVal} m</td>
             <td>${larVal} m</td>
             <td class="val" style="font-size:12px; background:#eeeeee;">${pcVal} m</td>
@@ -305,6 +313,7 @@ export default function PreviewScreen() {
           <thead>
             <tr>
               <th rowspan="2" style="width:5%;">N°<br>PROFIL</th>
+              <th rowspan="2" style="width:4%;">POINT</th>
               <th rowspan="2" style="width:8%;">LECTURE AV<br>(m)</th>
               <th rowspan="2" style="width:10%;">COTE<br>RÉCEPTION<br>(PRATIQUE)</th>
               <th rowspan="2" style="width:10%;">COTE PROJET<br>(THÉORIQUE)</th>
@@ -313,15 +322,14 @@ export default function PreviewScreen() {
               <th rowspan="2">OBSERVATION /<br>OBSTACLE</th>
             </tr>
           </thead>
+          ${rowsHtml || `
           <tbody>
-            ${rowsHtml || `
-              <tr>
-                <td colspan="7" class="center" style="padding: 12px; font-style: italic; color: #666;">
-                  Aucun profil saisi.
-                </td>
-              </tr>
-            `}
-          </tbody>
+            <tr>
+              <td colspan="8" class="center" style="padding: 12px; font-style: italic; color: #666;">
+                Aucun profil saisi.
+              </td>
+            </tr>
+          </tbody>`}
         </table>
 
         <div class="nota">

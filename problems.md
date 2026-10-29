@@ -15,6 +15,13 @@ This document serves as the permanent record of all identified bugs, root causes
 | **5** | **Data Loss on App Interruption / Kill**: Closing the app or background interruption wiped all survey inputs and profiles. | Zustand store was purely in-memory with no storage adapter. | Implemented custom `AsyncStorage` adapter in `src/store/storage.ts` and wrapped `useProjectStore` with Zustand's `persist` middleware with `partialize` (persisting only data, never action functions). | ✅ **RESOLVED** |
 | **6** | **Unused Template Boilerplate Clutter**: Default template files from `create-expo-app` remained in the repository. | Boilerplate files (`two.tsx`, `modal.tsx`, `EditScreenInfo.tsx`, `ExternalLink.tsx`, `StyledText.tsx`, `Themed.tsx`, `useClientOnlyValue.ts`, `Colors.ts`) were unused by the core application. | Completely removed all obsolete boilerplate files and their unused route declarations, keeping only active components and styles. | ✅ **RESOLVED** |
 | **7** | **Print Cache Unreadable (`copyAsync` Rejection)**: `ExponentFileSystem.copyAsync` failed with `java.io.IOException: Location 'file:///data/user/0/host.exp.exponent/cache/Print/....pdf' isn't readable`. | On Android in Expo Go, the print cache directory (`/cache/Print/`) is managed by the native Android print spooler service with isolated permissions, making it unreadable by `ExponentFileSystem.copyAsync`. | Updated `Print.printToFileAsync({ html, base64: true })` to capture the in-memory Base64 PDF directly, then wrote it directly to `FileSystem.documentDirectory` using `FileSystem.writeAsStringAsync(destUri, base64, { encoding: EncodingType.Base64 })`. Completely avoids reading from the inaccessible print cache. | ✅ **RESOLVED** |
+| **8** | **Unescaped user text in PDF HTML**: `<`, `&` or quotes in observation/repère/etc. break or inject into the generated PDF. | Template literals interpolated raw strings. | Added `src/utils/html.ts` (`escapeHtml`) and applied it to all free-text fields in `preview.tsx`. | ✅ **RESOLVED** (unverified on device) |
+| **9** | **Stale / UTC-shifted date**: reset reused the date from app launch; `toISOString()` could shift the picked day. | `initialState` evaluated once; UTC conversion. | Added `src/utils/date.ts` (local-time helpers); store builds a fresh initial state on reset; index and preview use the helpers. | ✅ **RESOLVED** (unverified on device) |
+| **10** | **Blank profile left behind**: tapping "Ajouter" then going back kept an empty profile. | Profile is created in the store before the edit screen opens. | `profile-edit.tsx` removes the profile on unmount if every field is empty. | ✅ **RESOLVED** (unverified on device) |
+| **11** | **No store migration path**. | `persist` had `version: 1` but no `migrate`. | Added a `migrate` stub in `useProjectStore.ts`; bump `version` there on schema changes. | ✅ **RESOLVED** |
+| **12** | **PDF table header misaligned**: header had no column for the point label (D1…G2), so every title sat one column left of its data. | Missing `<th>` for the label column. | Added a `POINT` header; empty-state `colspan` set to 8. | ✅ **RESOLVED** (verified in headless Chromium) |
+| **13** | **PDF header & pagination**: only one institutional line; profiles could split across pages. | Template. | Official 4-line header; each profile in its own `<tbody>` with `page-break-inside: avoid`; `thead` repeats. | ✅ **RESOLVED** (verified in headless Chromium, 20 profiles → 3 pages) |
+| **14** | **No tolerance / sanity checks, no tests.** | Not implemented. | `calculations.ts`: `getConformity` (±2 cm default), `checkReading`, `checkDifference`; ✓/⚠ and a "Vérifications" card on the profile edit screen; 8 tests via `npm test` (Node built-in runner). | ✅ **RESOLVED** (UI unverified on device) |
 
 ---
 
@@ -151,3 +158,15 @@ FicheReception/
 
 - **TypeScript Compilation**: `npx tsc --noEmit` passed with **0 errors**.
 - **All Reported Bugs**: Documented, analyzed, resolved, and logged in this tracker.
+
+---
+
+## 7. Open Backlog (prioritised)
+
+1. Make tolerance configurable per project (currently constant ±2 cm in `DEFAULT_TOLERANCE_M`) — check `RECEPTION TN .xlsx` for the real rule.
+2. Consider matching the UI input order to the form (UI: D2, D1, Axe, G1, G2 follows the physical left→right order on the ground; PDF/form: D1, D2, Axe, G1, G2). Left unchanged deliberately.
+3. Roadmap features: see `recommendations.md` (multi-project, JSON backup, signatures, CSV, photos, GPS, branding).
+
+> Items 8–14 were implemented without being able to run `tsc`/`expo lint` (npm registry unreachable in that session). Run `npx tsc --noEmit && npx expo lint` before merging.
+
+- Point order unified: UI now uses D1, D2 (F), Axe, G1, G2 (F), same as the PDF.
