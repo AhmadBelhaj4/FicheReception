@@ -168,3 +168,5 @@ FicheReception/
 3. Roadmap features: see `recommendations.md` (multi-project, JSON backup, signatures, CSV, photos, GPS, branding).
 
 > Items 8–14 were implemented without being able to run `tsc`/`expo lint` (npm registry unreachable in that session). Run `npx tsc --noEmit && npx expo lint` before merging.
+
+- Point order unified: UI now uses D1, D2 (F), Axe, G1, G2 (F), same as the PDF.

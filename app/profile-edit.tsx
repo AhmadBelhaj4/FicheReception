@@ -259,23 +259,23 @@ export default function ProfileEditScreen() {
             </Text>
           </View>
           <Text className="text-slate-500 text-xs mb-3">
-            Ordre standard terrain : Droite (D2, D1), Axe, Gauche (G1, G2)
+            Même ordre que la fiche officielle : D1, D2 (F), Axe, G1, G2 (F)
           </Text>
 
-          {/* D2, D1, Axe on one row */}
+          {/* D1, D2, Axe on one row (same order as the PDF) */}
           <View className="flex-row gap-2">
-            <View className="flex-1">
-              <NumInput
-                label="D2 (Ext D)"
-                value={profile.d2}
-                onChange={(v) => updateProfile(profile.id, { d2: v })}
-              />
-            </View>
             <View className="flex-1">
               <NumInput
                 label="D1 (Int D)"
                 value={profile.d1}
                 onChange={(v) => updateProfile(profile.id, { d1: v })}
+              />
+            </View>
+            <View className="flex-1">
+              <NumInput
+                label="D2 (Ext D)"
+                value={profile.d2}
+                onChange={(v) => updateProfile(profile.id, { d2: v })}
               />
             </View>
             <View className="flex-1">
@@ -357,8 +357,8 @@ export default function ProfileEditScreen() {
             <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Diff.</Text>
           </View>
 
-          <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
           <ResultLine label="D1" lecture={profile.d1} cote={coteD1} diff={diffD1} />
+          <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
           <ResultLine label="Axe" isAxe lecture={profile.axe} cote={coteAxe} diff={diffAxe} />
           <ResultLine label="G1" lecture={profile.g1} cote={coteG1} diff={diffG1} />
           <ResultLine label="G2" lecture={profile.g2} cote={coteG2} diff={diffG2} />
