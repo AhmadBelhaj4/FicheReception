@@ -37,6 +37,11 @@ export interface ProjectState {
   // Step 3: Profiles
   profiles: ProfileData[];
 
+  // Step 4: Signatures (base64 PNG strings, null = not signed)
+  signatureEntreprise: string | null;
+  signatureBureau: string | null;
+  signatureClient: string | null;
+
   // Actions
   setHeader: (data: HeaderData) => void;
   setReference: (data: ReferenceData) => void;
@@ -44,6 +49,7 @@ export interface ProjectState {
   updateProfile: (id: string, data: Partial<ProfileData>) => void;
   deleteProfile: (id: string) => void;
   duplicateProfile: (id: string) => void;
+  setSignature: (party: 'entreprise' | 'bureau' | 'client', base64: string | null) => void;
   resetProject: () => void;
 }
 

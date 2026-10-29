@@ -16,6 +16,9 @@ const createInitialState = () => ({
   lectureArriere: null as number | null,
   pc: null as number | null,
   profiles: [] as ProjectState['profiles'],
+  signatureEntreprise: null as string | null,
+  signatureBureau: null as string | null,
+  signatureClient: null as string | null,
 });
 
 export const useProjectStore = create<ProjectState>()(
@@ -73,6 +76,13 @@ export const useProjectStore = create<ProjectState>()(
           return { profiles: newProfiles };
         }),
 
+      setSignature: (party, base64) =>
+        set(() => {
+          if (party === 'entreprise') return { signatureEntreprise: base64 };
+          if (party === 'bureau') return { signatureBureau: base64 };
+          return { signatureClient: base64 };
+        }),
+
       resetProject: () => set(createInitialState()),
     }),
     {
@@ -93,6 +103,9 @@ export const useProjectStore = create<ProjectState>()(
         lectureArriere: state.lectureArriere,
         pc: state.pc,
         profiles: state.profiles,
+        signatureEntreprise: state.signatureEntreprise,
+        signatureBureau: state.signatureBureau,
+        signatureClient: state.signatureClient,
       }),
     }
   )

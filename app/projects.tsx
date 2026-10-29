@@ -11,6 +11,9 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from 'expo-document-picker';
 import { Button } from 'heroui-native';
 
 import { useProjectsStore } from '../src/store/useProjectsStore';
@@ -26,7 +29,7 @@ const STATUS_COLORS: Record<ProjectStatus, { bg: string; text: string }> = {
 
 export default function ProjectsScreen() {
   const router = useRouter();
-  const { projects, createProject, openProject, deleteProject, updateProjectStatus, archiveProject } =
+  const { projects, createProject, openProject, deleteProject, archiveProject } =
     useProjectsStore();
   const { setHeader, setReference, addProfile, resetProject } = useProjectStore();
 
@@ -83,6 +86,74 @@ export default function ProjectsScreen() {
 
   const handleArchiveProject = (id: string) => {
     archiveProject(id);
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      const backup = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        projects: projects,
+      };
+      const json = JSON.stringify(backup, null, 2);
+      const fileName = `fiche-reception-backup-${Date.now()}.json`;
+      const destUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(destUri, json, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const available = await Sharing.isAvailableAsync();
+      if (available) {
+        await Sharing.shareAsync(destUri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Sauvegarder les chantiers',
+          UTI: 'public.json',
+        });
+      } else {
+        Alert.alert('Sauvegarde', `Fichier enregistré :\n${destUri}`);
+      }
+    } catch (e) {
+      Alert.alert('Erreur', 'Sauvegarde échouée : ' + String(e));
+    }
+  };
+
+  const handleImportBackup = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const uri = result.assets[0].uri;
+      const raw = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const backup = JSON.parse(raw);
+      if (!Array.isArray(backup?.projects)) {
+        Alert.alert('Erreur', 'Fichier de sauvegarde invalide.');
+        return;
+      }
+      Alert.alert(
+        'Importer la sauvegarde',
+        `${backup.projects.length} chantier(s) trouvé(s). Les importer ?`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Importer',
+            onPress: () => {
+              backup.projects.forEach((p: SavedProject) => {
+                const existing = projects.find((ex) => ex.id === p.id);
+                if (!existing) {
+                  useProjectsStore.setState((s) => ({ projects: [...s.projects, p] }));
+                }
+              });
+              Alert.alert('Import réussi', `${backup.projects.length} chantier(s) importé(s).`);
+            },
+          },
+        ]
+      );
+    } catch (e) {
+      Alert.alert('Erreur', 'Import échoué : ' + String(e));
+    }
   };
 
   const renderItem = ({ item }: { item: SavedProject }) => {
@@ -174,6 +245,28 @@ export default function ProjectsScreen() {
         >
           <Text className="text-white text-xl font-black mr-1">+</Text>
           <Button.Label className="font-bold tracking-wide">Nouveau Chantier</Button.Label>
+        </Button>
+      </View>
+
+      {/* Backup / restore */}
+      <View className="flex-row gap-2 px-5 pb-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onPress={handleExportBackup}
+          className="flex-1"
+        >
+          <Text className="text-sm mr-1">💾</Text>
+          <Button.Label className="font-bold text-xs text-slate-300">Sauvegarder</Button.Label>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onPress={handleImportBackup}
+          className="flex-1"
+        >
+          <Text className="text-sm mr-1">📥</Text>
+          <Button.Label className="font-bold text-xs text-slate-300">Restaurer</Button.Label>
         </Button>
       </View>
 

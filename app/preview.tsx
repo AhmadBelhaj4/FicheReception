@@ -15,15 +15,19 @@ import { formatDateFR } from '../src/utils/date';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
+import { useSettingsStore } from '../src/store/useSettingsStore';
+import { SignatureModal } from '../components/SignatureModal';
 import {
   calculateCotePratique,
   calculateDifference,
+  getConformity,
 } from '../src/utils/calculations';
 import { ProfileData } from '../src/types';
 
 export default function PreviewScreen() {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [sigModalParty, setSigModalParty] = useState<'entreprise' | 'bureau' | 'client' | null>(null);
 
   const {
     receptionNumber,
@@ -36,8 +40,14 @@ export default function PreviewScreen() {
     lectureArriere,
     pc,
     profiles,
+    signatureEntreprise,
+    signatureBureau,
+    signatureClient,
+    setSignature,
     resetProject,
   } = useProjectStore();
+
+  const { logoBase64, toleranceM } = useSettingsStore();
 
   const formattedDate = formatDateFR(date);
 
@@ -46,6 +56,21 @@ export default function PreviewScreen() {
   // Layout: readings stacked vertically per profile (5 rows per profile),
   // with rowspan on N°, Cote Projet, Dévers, Observation columns.
   const generateHtml = (): string => {
+    // Institution header: use logo if available, else fallback to text
+    const institutionHtml = logoBase64
+      ? `<div class="institution" style="text-align:center;"><img src="${logoBase64}" style="max-height:48px;max-width:100%;object-fit:contain;" alt="Logo"/></div>`
+      : `<div class="institution">R\u00c9PUBLIQUE TUNISIENNE<br>AGENCE DE R\u00c9HABILITATION ET DE R\u00c9NOVATION URBAINE<br>TRAVAUX DE R\u00c9HABILITATION DU QUARTIER ENNOUR<br>DANS LA COMMUNE DE KASSERINE</div>`;
+
+    // Signature cells: embed base64 images when signed
+    const sigCellEntreprise = signatureEntreprise
+      ? `<img src="data:image/png;base64,${signatureEntreprise}" style="max-width:100%;max-height:50px;display:block;margin:4px auto;"/>`
+      : '';
+    const sigCellBureau = signatureBureau
+      ? `<img src="data:image/png;base64,${signatureBureau}" style="max-width:100%;max-height:50px;display:block;margin:4px auto;"/>`
+      : '';
+    const sigCellClient = signatureClient
+      ? `<img src="data:image/png;base64,${signatureClient}" style="max-width:100%;max-height:50px;display:block;margin:4px auto;"/>`
+      : '';
     const pcVal = pc !== null ? pc.toFixed(3) : '-';
     const altVal = alt !== null ? alt.toFixed(3) : '-';
     const larVal = lectureArriere !== null ? lectureArriere.toFixed(3) : '-';
@@ -55,8 +80,10 @@ export default function PreviewScreen() {
     const formatDiff = (diff: number | null) => {
       if (diff === null) return '';
       const val = diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3);
-      const color = diff > 0 ? '#15803d' : diff < 0 ? '#b91c1c' : '#334155';
-      return `<span style="color: ${color}; font-weight: bold;">${val}</span>`;
+      const isOk = getConformity(diff, toleranceM) === 'ok';
+      const mark = isOk ? ' ✓' : ' ⚠';
+      const color = isOk ? '#15803d' : '#b91c1c';
+      return `<span style="color: ${color}; font-weight: bold;">${val}${mark}</span>`;
     };
 
     const rowsHtml = profiles
@@ -340,13 +367,16 @@ export default function PreviewScreen() {
         <table class="sig-table">
           <tr>
             <td>
-              <div class="sig-title">L'ENTREPRISE TRAVAUX</div>
+              <div class="sig-title">L\'ENTREPRISE TRAVAUX</div>
+              ${sigCellEntreprise}
             </td>
             <td>
               <div class="sig-title">BUREAU DE CONTRÔLE / GÉOMÈTRE</div>
+              ${sigCellBureau}
             </td>
             <td>
-              <div class="sig-title">MAÎTRE D'OUVRAGE / CLIENT</div>
+              <div class="sig-title">MAÎTRE D\'OUVRAGE / CLIENT</div>
+              ${sigCellClient}
             </td>
           </tr>
         </table>
@@ -586,6 +616,14 @@ export default function PreviewScreen() {
     }
   };
 
+  const handleConfirmSignature = (base64: string) => {
+    if (sigModalParty) {
+      setSignature(sigModalParty, base64);
+    }
+    setSigModalParty(null);
+  };
+
+
   const handleReset = () => {
     Alert.alert(
       'Nouveau Projet',
@@ -683,7 +721,57 @@ export default function PreviewScreen() {
           </View>
         </View>
 
-        {/* ── Action buttons ── */}
+        
+        {/* ── 3. Signatures numériques ── */}
+        <View className="bg-slate-800 rounded-2xl p-5 mb-5 border border-slate-700">
+          <View className="flex-row items-center gap-2 mb-4">
+            <View className="w-1 h-5 bg-emerald-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              3. Signatures
+            </Text>
+          </View>
+
+          {([
+            { party: 'entreprise' as const, label: "L'Entreprise Travaux", sig: signatureEntreprise },
+            { party: 'bureau'     as const, label: 'Bureau de Contrôle / Géomètre', sig: signatureBureau },
+            { party: 'client'     as const, label: "Maître d'Ouvrage / Client", sig: signatureClient },
+          ]).map(({ party, label, sig }) => (
+            <View key={party} className="flex-row items-center justify-between py-3 border-b border-slate-700">
+              <View className="flex-1 mr-3">
+                <Text className="text-slate-400 text-xs font-bold mb-1">{label}</Text>
+                {sig ? (
+                  <Text className="text-emerald-400 text-xs font-bold">✓ Signé</Text>
+                ) : (
+                  <Text className="text-slate-600 text-xs italic">Non signé</Text>
+                )}
+              </View>
+              <View className="flex-row gap-2">
+                <Button
+                  variant={sig ? 'outline' : 'primary'}
+                  size="sm"
+                  feedbackVariant="scale-ripple"
+                  onPress={() => setSigModalParty(party)}
+                >
+                  <Button.Label className="font-bold text-xs">
+                    {sig ? 'Modifier' : 'Signer ici'}
+                  </Button.Label>
+                </Button>
+                {sig && (
+                  <Button
+                    variant="danger-soft"
+                    size="sm"
+                    isIconOnly
+                    onPress={() => setSignature(party, null)}
+                  >
+                    <Text className="text-red-400 font-bold text-xs">✕</Text>
+                  </Button>
+                )}
+              </View>
+            </View>
+          ))}
+        </View>
+
+{/* ── Action buttons ── */}
         <View className="gap-3 mb-5">
           {/* Primary: Share PDF */}
           <Button
@@ -752,6 +840,19 @@ export default function PreviewScreen() {
           </Button>
         </View>
       </ScrollView>
+      {/* Signature capture modal */}
+      {sigModalParty && (
+        <SignatureModal
+          visible={true}
+          title={
+            sigModalParty === 'entreprise' ? "L'Entreprise Travaux" :
+            sigModalParty === 'bureau' ? 'Bureau de Contrôle / Géomètre' :
+            "Maître d'Ouvrage / Client"
+          }
+          onConfirm={handleConfirmSignature}
+          onCancel={() => setSigModalParty(null)}
+        />
+      )}
     </View>
   );
 }

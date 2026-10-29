@@ -203,16 +203,27 @@ export default function HeaderScreen() {
           <Text className="text-white text-lg ml-1">{'\u2192'}</Text>
         </Button>
 
-        {/* ── Mes Chantiers link ── */}
-        <Button
-          variant="outline"
-          size="md"
-          onPress={() => router.push('/projects' as Href)}
-          className="mt-3"
-        >
-          <Text className="mr-2 text-base">{'\uD83C\uDFD7\uFE0F'}</Text>
-          <Button.Label className="font-bold text-slate-300">Mes Chantiers</Button.Label>
-        </Button>
+        {/* ── Bottom links row ── */}
+        <View className="flex-row gap-3 mt-3">
+          <Button
+            variant="outline"
+            size="md"
+            onPress={() => router.push('/projects' as Href)}
+            className="flex-1"
+          >
+            <Text className="mr-2 text-base">{'\uD83C\uDFD7\uFE0F'}</Text>
+            <Button.Label className="font-bold text-slate-300">Chantiers</Button.Label>
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
+            onPress={() => router.push('/settings' as Href)}
+            className="flex-1"
+          >
+            <Text className="mr-2 text-base">{'\u2699\uFE0F'}</Text>
+            <Button.Label className="font-bold text-slate-300">{"Param\u00e8tres"}</Button.Label>
+          </Button>
+        </View>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

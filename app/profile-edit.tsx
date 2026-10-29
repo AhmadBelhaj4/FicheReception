@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
+import { useSettingsStore } from '../src/store/useSettingsStore';
 import {
   calculateCotePratique,
   calculateDifference,
@@ -111,12 +112,14 @@ function ResultLine({
   lecture,
   cote,
   diff,
+  tolerance,
 }: {
   label: string;
   isAxe?: boolean;
   lecture: number | null;
   cote: number | null;
   diff: number | null;
+  tolerance?: number;
 }) {
   const isRemblai = diff !== null && diff > 0;
   const isDeblai  = diff !== null && diff < 0;
@@ -146,7 +149,7 @@ function ResultLine({
       <Text className={`${diffColor} text-xs text-center flex-1 font-bold`}>
         {diff !== null
           ? (diff > 0 ? `+${diff.toFixed(3)}` : diff.toFixed(3)) +
-            (getConformity(diff) === 'ok' ? ' ✓' : ' ⚠')
+            (getConformity(diff, tolerance) === 'ok' ? ' ✓' : ' ⚠')
           : '–'}
       </Text>
     </View>
@@ -158,6 +161,7 @@ export default function ProfileEditScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profiles, pc, updateProfile } = useProjectStore();
+  const { toleranceM } = useSettingsStore();
 
   // Discard a never-filled profile when leaving the screen, so tapping
   // "Ajouter" then going back doesn't leave a blank profile in the list.
@@ -358,13 +362,13 @@ export default function ProfileEditScreen() {
             <Text className="flex-1 text-xs font-black text-center text-slate-400 uppercase">Diff.</Text>
           </View>
 
-          <ResultLine label="D1" lecture={profile.d1} cote={coteD1} diff={diffD1} />
-          <ResultLine label="D2" lecture={profile.d2} cote={coteD2} diff={diffD2} />
+          <ResultLine label="D1" tolerance={toleranceM} lecture={profile.d1} cote={coteD1} diff={diffD1} />
+          <ResultLine label="D2" tolerance={toleranceM} lecture={profile.d2} cote={coteD2} diff={diffD2} />
           <ResultLine label="Axe" isAxe lecture={profile.axe} cote={coteAxe} diff={diffAxe} />
-          <ResultLine label="G1" lecture={profile.g1} cote={coteG1} diff={diffG1} />
-          <ResultLine label="G2" lecture={profile.g2} cote={coteG2} diff={diffG2} />
+          <ResultLine label="G1" tolerance={toleranceM} lecture={profile.g1} cote={coteG1} diff={diffG1} />
+          <ResultLine label="G2" tolerance={toleranceM} lecture={profile.g2} cote={coteG2} diff={diffG2} />
           <Text className="text-slate-500 text-xs px-4 py-2">
-            ✓ conforme (± {(DEFAULT_TOLERANCE_M * 100).toFixed(0)} cm) · ⚠ hors tolérance
+            ✓ conforme (± {(toleranceM * 100).toFixed(0)} cm) · ⚠ hors tolérance
           </Text>
         </View>
 

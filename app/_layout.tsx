@@ -104,6 +104,13 @@ function RootLayoutNav() {
                 headerBackTitle: "Retour",
               }}
             />
+            <Stack.Screen
+              name="settings"
+              options={{
+                title: "Paramètres",
+                headerBackTitle: "Retour",
+              }}
+            />
           </Stack>
         </ThemeProvider>
       </HeroUINativeProvider>
