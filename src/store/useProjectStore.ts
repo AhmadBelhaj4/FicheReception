@@ -4,20 +4,22 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { ProjectState, ProfileData } from '../types';
 import { zustandStorage } from './storage';
 import { toLocalISODate } from '../utils/date';
+import { DEFAULT_INSTITUTION } from '../utils/fichePdf';
+import { DEFAULT_LOGO_ARRU, DEFAULT_LOGO_SOIT } from '../assets/defaultLogos';
 
 const createInitialState = () => ({
   receptionNumber: '',
   vNumber: '',
-  pNumber: '',
   date: toLocalISODate(),
   typeIntervention: '',
+  institutionLines: [...DEFAULT_INSTITUTION] as [string, string, string, string],
   repere: '',
   alt: null as number | null,
   lectureArriere: null as number | null,
   pc: null as number | null,
   profiles: [] as ProfileData[],
-  logoClient: null as string | null,
-  logoBureau: null as string | null,
+  logoClient: DEFAULT_LOGO_ARRU as string | null,
+  logoBureau: DEFAULT_LOGO_SOIT as string | null,
 });
 
 export const useProjectStore = create<ProjectState>()(
@@ -81,14 +83,26 @@ export const useProjectStore = create<ProjectState>()(
     {
       name: 'fiche-reception-project',
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
-      migrate: (persistedState: unknown, _version: number) => persistedState as ProjectState,
+      version: 2,
+      // v2: `pNumber` removed (page numbers are automatic), `institutionLines` added,
+      // original ENNOUR logos pre-filled when none was chosen.
+      migrate: (persistedState: unknown, _version: number) => {
+        const { pNumber: _drop, ...rest } = (persistedState ?? {}) as Record<string, unknown>;
+        return {
+          ...rest,
+          institutionLines: Array.isArray(rest.institutionLines)
+            ? rest.institutionLines
+            : [...DEFAULT_INSTITUTION],
+          logoClient: rest.logoClient ?? DEFAULT_LOGO_ARRU,
+          logoBureau: rest.logoBureau ?? DEFAULT_LOGO_SOIT,
+        } as unknown as ProjectState;
+      },
       partialize: (state) => ({
         receptionNumber: state.receptionNumber,
         vNumber: state.vNumber,
-        pNumber: state.pNumber,
         date: state.date,
         typeIntervention: state.typeIntervention,
+        institutionLines: state.institutionLines,
         repere: state.repere,
         alt: state.alt,
         lectureArriere: state.lectureArriere,

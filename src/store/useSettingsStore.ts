@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from './storage';
+import { DEFAULT_LOGO_SAMED } from '../assets/defaultLogos';
 
 export interface SettingsState {
   /** Base64-encoded company logo image (data URI without prefix), or null */
@@ -18,7 +19,7 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      logoBase64: null,
+      logoBase64: DEFAULT_LOGO_SAMED,
       toleranceM: 0.02, // 2 cm default
 
       setLogo: (base64) => set({ logoBase64: base64 }),
@@ -27,9 +28,11 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'fiche-reception-settings',
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
-      migrate: (persistedState: unknown, _version: number) =>
-        persistedState as SettingsState,
+      version: 2, // v2: original enterprise logo pre-filled when none was chosen
+      migrate: (persistedState: unknown, _version: number) => {
+        const s = (persistedState ?? {}) as Partial<SettingsState>;
+        return { ...s, logoBase64: s.logoBase64 ?? DEFAULT_LOGO_SAMED } as SettingsState;
+      },
       partialize: (state) => ({
         logoBase64: state.logoBase64,
         toleranceM: state.toleranceM,

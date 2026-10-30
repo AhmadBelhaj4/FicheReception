@@ -16,6 +16,14 @@ import { StepBadge } from '../../components/ui/StepBadge';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { FieldCard } from '../../components/ui/FieldCard';
 import { parseLocalISODate, toLocalISODate } from '../../src/utils/date';
+import { DEFAULT_INSTITUTION } from '../../src/utils/fichePdf';
+
+const INSTITUTION_LABELS = [
+  'Ligne 1 (petite)',
+  'Ligne 2 (petite)',
+  'Ligne 3 (grande)',
+  'Ligne 4 (grande)',
+];
 
 export default function HeaderScreen() {
   const router = useRouter();
@@ -23,7 +31,7 @@ export default function HeaderScreen() {
   const {
     receptionNumber,
     vNumber,
-    pNumber,
+    institutionLines,
     date,
     typeIntervention,
     setHeader,
@@ -88,36 +96,20 @@ export default function HeaderScreen() {
             />
           </TextField>
 
-          {/* V N° + P N° row */}
-          <View className="flex-row gap-3 mb-4">
-            <TextField className="flex-1">
-              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                V N°
-              </Label>
-              <Input
-                className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
-                placeholder="Ex : 02"
-                placeholderTextColor="#64748b"
-                value={vNumber}
-                onChangeText={(t) => setHeader({ vNumber: t })}
-                returnKeyType="next"
-              />
-            </TextField>
-
-            <TextField className="flex-1">
-              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                P N°
-              </Label>
-              <Input
-                className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
-                placeholder="Ex : 1/4"
-                placeholderTextColor="#64748b"
-                value={pNumber}
-                onChangeText={(t) => setHeader({ pNumber: t })}
-                returnKeyType="done"
-              />
-            </TextField>
-          </View>
+          {/* V */}
+          <TextField className="mb-4">
+            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              V
+            </Label>
+            <Input
+              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+              placeholder="Ex : 02"
+              placeholderTextColor="#64748b"
+              value={vNumber}
+              onChangeText={(t) => setHeader({ vNumber: t })}
+              returnKeyType="done"
+            />
+          </TextField>
 
           {/* Date de réception */}
           <View className="mb-1">
@@ -187,6 +179,50 @@ export default function HeaderScreen() {
               style={{ minHeight: 96, paddingTop: 12 }}
             />
           </TextField>
+        </FieldCard>
+
+        {/* ─── En-tête officiel (bloc entre les logos) ─── */}
+        <FieldCard>
+          <View className="flex-row items-center gap-2 mb-1">
+            <View className="w-1 h-5 bg-amber-400 rounded-full" />
+            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+              En-tête du document
+            </Text>
+          </View>
+          <Text className="text-slate-500 text-xs mb-4 leading-relaxed">
+            Texte du cadre central entre les logos. Pré-rempli avec l’en-tête ENNOUR, modifiable pour chaque fiche.
+          </Text>
+
+          {INSTITUTION_LABELS.map((label, i) => (
+            <TextField key={label} className="mb-3">
+              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                {label}
+              </Label>
+              <Input
+                className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+                value={institutionLines[i]}
+                autoCapitalize="characters"
+                onChangeText={(t) => {
+                  const next = [...institutionLines] as typeof institutionLines;
+                  next[i] = t;
+                  setHeader({ institutionLines: next });
+                }}
+                returnKeyType={i === 3 ? 'done' : 'next'}
+              />
+            </TextField>
+          ))}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={() =>
+              setHeader({ institutionLines: [...DEFAULT_INSTITUTION] as typeof institutionLines })
+            }
+          >
+            <Button.Label className="font-bold text-xs text-slate-300">
+              Rétablir l’en-tête ENNOUR
+            </Button.Label>
+          </Button>
         </FieldCard>
 
         {/* ─── CTA ─── */}
