@@ -13,7 +13,7 @@ export interface ProfileData {
 }
 
 export type HeaderData = Partial<
-  Pick<ProjectState, 'receptionNumber' | 'vNumber' | 'pNumber' | 'date' | 'typeIntervention'>
+  Pick<ProjectState, 'receptionNumber' | 'vNumber' | 'date' | 'typeIntervention' | 'institutionLines'>
 >;
 
 export type ReferenceData = Partial<
@@ -24,9 +24,10 @@ export interface ProjectState {
   // Step 1: Header
   receptionNumber: string;
   vNumber: string;
-  pNumber: string;
   date: string;
   typeIntervention: string;
+  /** The 4 lines of the institutional box in the PDF header (2 small + 2 large). */
+  institutionLines: [string, string, string, string];
 
   // Step 2: Reference
   repere: string;
@@ -66,9 +67,9 @@ export interface SavedProject {
   // Survey data fields
   receptionNumber: string;
   vNumber: string;
-  pNumber: string;
   date: string;
   typeIntervention: string;
+  institutionLines?: [string, string, string, string];
   repere: string;
   alt: number | null;
   lectureArriere: number | null;

@@ -81,7 +81,7 @@ export default function SettingsScreen() {
           </View>
 
           <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
-            {"Le logo s'affiche dans l'en-tête de chaque PDF généré, à la place du texte institutionnel.\nFormat recommandé : image horizontale (rapport 4:1), PNG ou JPEG."}
+            {"Le logo s'affiche à gauche de l'en-tête de chaque PDF, à droite du logo client (emplacement 80 × 46 pt).\nFormat recommandé : PNG à fond transparent, rapport 16:9."}
           </Text>
 
           {logoBase64 ? (
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
             <View style={{ backgroundColor: '#0f172a', borderRadius: 12, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#1e293b', borderStyle: 'dashed' }}>
               <Text style={{ fontSize: 32, marginBottom: 8 }}>🏢</Text>
               <Text style={{ color: '#475569', fontSize: 13, textAlign: 'center' }}>
-                Aucun logo sélectionné{'\n'}Le texte institutionnel ARRU sera utilisé
+                Aucun logo sélectionné{'\n'}L'emplacement restera vide dans le PDF
               </Text>
             </View>
           )}
@@ -139,7 +139,7 @@ export default function SettingsScreen() {
           </View>
 
           <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
-            {"Seuil en cm pour l'indicateur de conformité sur chaque point. Un écart inférieur ou égal à ce seuil affiche ✓, sinon ⚠."}
+            {"Seuil en cm pour l'indicateur de conformité sur chaque point. Au-delà de ce seuil, l'écart est affiché ⚠ dans l'application et en rouge gras dans le PDF."}
           </Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

@@ -5,6 +5,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { ProjectsState, SavedProject, ProjectStatus } from '../types';
 import { zustandStorage } from './storage';
 import { toLocalISODate } from '../utils/date';
+import { DEFAULT_INSTITUTION } from '../utils/fichePdf';
+import { DEFAULT_LOGO_ARRU, DEFAULT_LOGO_SOIT } from '../assets/defaultLogos';
 
 export const useProjectsStore = create<ProjectsState>()(
   persist(
@@ -23,16 +25,16 @@ export const useProjectsStore = create<ProjectsState>()(
           status: 'En cours',
           receptionNumber: '',
           vNumber: '',
-          pNumber: '',
           date: now,
           typeIntervention: '',
+          institutionLines: [...DEFAULT_INSTITUTION],
           repere: '',
           alt: null,
           lectureArriere: null,
           pc: null,
           profiles: [],
-          logoClient: null,
-          logoBureau: null,
+          logoClient: DEFAULT_LOGO_ARRU,
+          logoBureau: DEFAULT_LOGO_SOIT,
         };
         set((state) => ({
           projects: [newProject, ...state.projects],
@@ -94,9 +96,9 @@ export const useProjectsStore = create<ProjectsState>()(
           status: 'En cours',
           receptionNumber: data.receptionNumber || '',
           vNumber: data.vNumber || '',
-          pNumber: data.pNumber || '',
           date: data.date || now,
           typeIntervention: data.typeIntervention || '',
+          institutionLines: data.institutionLines ?? [...DEFAULT_INSTITUTION],
           repere: data.repere || '',
           alt: data.alt ?? null,
           lectureArriere: data.lectureArriere ?? null,
@@ -139,7 +141,7 @@ export const useProjectsStore = create<ProjectsState>()(
     {
       name: 'fiche-reception-projects',
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
+      version: 1, // saved projects: missing `institutionLines` is handled at load time
       migrate: (persistedState: unknown, _version: number) => persistedState as ProjectsState,
       partialize: (state) => ({
         projects: state.projects,

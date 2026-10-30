@@ -44,9 +44,9 @@ export default function ProjectsScreen() {
     setHeader({
       receptionNumber: proj.receptionNumber,
       vNumber: proj.vNumber,
-      pNumber: proj.pNumber,
       date: proj.date,
       typeIntervention: proj.typeIntervention,
+      ...(proj.institutionLines ? { institutionLines: proj.institutionLines } : {}),
     });
     setReference({
       repere: proj.repere,
