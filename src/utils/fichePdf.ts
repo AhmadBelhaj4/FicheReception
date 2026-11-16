@@ -282,37 +282,40 @@ function renderPage(
     texts.push(`<div class="t" style="${style}"><span>${html}</span></div>`);
   };
 
-  // ── Logos (original slots: ARRU 39.4², SAMED 80.7×46.1, SOIT 72²) ──
-  logo(input.logos.client, 31.8, 28.3, 39.4, 39.4);
-  logo(input.logos.enterprise, 71.2, 26.6, 80.7, 46.1);
-  logo(input.logos.bureau, 490.9, 10.4, 72.0, 72.0);
+  // ── Top header (Logos, Institutional box, Title) ── only on first page
+  if (pageNo === 1) {
+    // ── Logos (original slots: client 39.4², enterprise 80.7×46.1, bureau 72²) ──
+    logo(input.logos.client, 31.8, 28.3, 39.4, 39.4);
+    logo(input.logos.enterprise, 71.2, 26.6, 80.7, 46.1);
+    logo(input.logos.bureau, 490.9, 10.4, 72.0, 72.0);
 
-  // ── Institutional double box ──
-  rect(151.05, 11.85, 464.35, 43.0, '#fff');
-  rect(151.15, 42.95, 464.75, 80.75, '#fff');
-  for (const [x0, y0, x1, y1] of [
-    [151.05, 11.85, 464.35, 43.0],
-    [151.15, 42.95, 464.75, 80.75],
-  ]) {
-    hl(x0, x1, y0, 0.75); hl(x0, x1, y1, 0.75); vl(x0, y0, y1, 0.75); vl(x1, y0, y1, 0.75);
+    // ── Institutional double box ──
+    rect(151.05, 11.85, 464.35, 43.0, '#fff');
+    rect(151.15, 42.95, 464.75, 80.75, '#fff');
+    for (const [x0, y0, x1, y1] of [
+      [151.05, 11.85, 464.35, 43.0],
+      [151.15, 42.95, 464.75, 80.75],
+    ]) {
+      hl(x0, x1, y0, 0.75); hl(x0, x1, y1, 0.75); vl(x0, y0, y1, 0.75); vl(x1, y0, y1, 0.75);
+    }
+    // Header lines keep their inner spacing (the original uses double spaces) – trim only.
+    const inst = input.institution.map((l) => String(l ?? '').replace(/[\r\n]+/g, ' ').trim().toUpperCase());
+    const instSpec: { cy: number; base: number; min: number; x0: number; x1: number }[] = [
+      { cy: 22.8, base: 10, min: 6.5, x0: 154, x1: 461.4 },
+      { cy: 35.05, base: 10, min: 6.5, x0: 154, x1: 461.4 },
+      { cy: 54.95, base: 13, min: 7.5, x0: 154, x1: 461.8 },
+      { cy: 70.55, base: 13, min: 7.5, x0: 154, x1: 461.8 },
+    ];
+    inst.forEach((line, i) => {
+      if (!line) return;
+      const sp = instSpec[i];
+      const size = fitSingleLine(m, 'FicheSans', line, sp.base, sp.min, sp.x1 - sp.x0 - 4, INST_LS);
+      txt(sp.x0, sp.cy - 7, sp.x1, sp.cy + 7, esc(line), { font: 'FicheSans', size, ls: INST_LS, pre: true });
+    });
+
+    // ── Title ──
+    txt(21.2, 87.0, 574.3, 104.0, 'FICHE DE RECEPTION TOPOGRAPHIQUE', { size: 14, dy: 1.0 });
   }
-  // Header lines keep their inner spacing (the original uses double spaces) – trim only.
-  const inst = input.institution.map((l) => String(l ?? '').replace(/[\r\n]+/g, ' ').trim().toUpperCase());
-  const instSpec: { cy: number; base: number; min: number; x0: number; x1: number }[] = [
-    { cy: 22.8, base: 10, min: 6.5, x0: 154, x1: 461.4 },
-    { cy: 35.05, base: 10, min: 6.5, x0: 154, x1: 461.4 },
-    { cy: 54.95, base: 13, min: 7.5, x0: 154, x1: 461.8 },
-    { cy: 70.55, base: 13, min: 7.5, x0: 154, x1: 461.8 },
-  ];
-  inst.forEach((line, i) => {
-    if (!line) return;
-    const sp = instSpec[i];
-    const size = fitSingleLine(m, 'FicheSans', line, sp.base, sp.min, sp.x1 - sp.x0 - 4, INST_LS);
-    txt(sp.x0, sp.cy - 7, sp.x1, sp.cy + 7, esc(line), { font: 'FicheSans', size, ls: INST_LS, pre: true });
-  });
-
-  // ── Title ──
-  txt(21.2, 87.0, 574.3, 104.0, 'FICHE DE RECEPTION TOPOGRAPHIQUE', { size: 14, dy: 1.0 });
 
   // ── Row 1: RÉCEPTION · V · P · Date ──
   const R1 = [115.0, 140.9];
@@ -483,12 +486,12 @@ function renderPage(
   txt(X[0], N[0] + 2.4, X[8], N[1] - 1.8, nota, { size: 9, align: 'l', padL: 5.9, lh: 10.3, dy: 0.7 });
 
   // ── Signature labels (Calibri 14 pt, condensed by 1 pt, baseline ≈ 730.2) ──
-  for (const [x, label] of [
-    [43.6, 'BUREAU DE CONTROLE'],
-    [283.9, 'ARRU'],
-    [475.4, 'ENTREPRISE'],
-  ] as [number, string][]) {
-    txt(x, 716.87, x + 150, 733.96, label, { font: 'FicheSans', size: 14, align: 'l', ls: INST_LS, dy: FOOT_DY });
+  for (const [x0, x1, label, align] of [
+    [43.6, 43.6 + 180, 'BUREAU DE CONTROLE', 'l'],
+    [200.0, 395.0, "MAITRE D'OUVRAGE", 'c'],
+    [475.4, 475.4 + 150, 'ENTREPRISE', 'l'],
+  ] as [number, number, string, 'l' | 'c'][]) {
+    txt(x0, 716.87, x1, 733.96, label, { font: 'FicheSans', size: 14, align, ls: INST_LS, dy: FOOT_DY });
   }
 
   return `<section class="pg">${fills.join('')}${imgs.join('')}${texts.join('')}${[...rules].join('')}</section>`;
