@@ -385,7 +385,7 @@ export default function PreviewScreen() {
 
           {[
             { label: 'Réception N°', value: receptionNumber || 'Non spécifié' },
-            { label: 'V', value: vNumber || '–' },
+            { label: 'Voie', value: vNumber || '–' },
             { label: 'Pages', value: `${pageCount} (5 profils par page)` },
             { label: 'Date', value: formattedDate || 'Non spécifiée' },
           ].map(({ label, value }) => (

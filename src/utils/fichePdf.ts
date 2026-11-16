@@ -96,7 +96,7 @@ const SHADED_ROWS = new Set([1, 4]);
 /** Placeholder dots, exactly as printed on the blank original. */
 const DOTS = {
   reception: '…'.repeat(16),
-  v : '…'.repeat(4) + '...',
+  v: '…'.repeat(5) + '...',
   date: '…'.repeat(9),
   type: '…'.repeat(29) + '...',
   repere: '…'.repeat(3) + '..',
@@ -330,9 +330,9 @@ function renderPage(
     { size: 11, align: 'l', padL: 3.6, dy: 0.8 });
 
   const v = oneLine(input.vNumber);
-  const vSize = v ? fitSingleLine(m, 'FicheSerifBold', 'V ' + v, 11, 6.5, X[5] - X[4] - 8) : 11;
+  const vSize = v ? fitSingleLine(m, 'FicheSerifBold', v, 11, 6.5, X[5] - X[4] - 8) : 11;
   txt(X[4], R1[0], X[5], R1[1],
-    `<b style="font-size:${u(vSize)}">V${v ? '&nbsp;' + esc(v) : DOTS.v}</b>`,
+    `<b style="font-size:${u(vSize)}">${v ? esc(v) : DOTS.v}</b>`,
     { size: 11, dy: 0.4 });
 
   txt(X[5], R1[0], X[6], R1[1], `P&nbsp;(${pageNo}/${pageCount})`, { size: 11, dy: 1.4 });
