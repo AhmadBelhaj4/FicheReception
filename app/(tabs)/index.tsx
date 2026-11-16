@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Platform,
   Text,
@@ -9,24 +9,43 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter, Href } from 'expo-router';
-import { Button, Input, Label, TextField } from 'heroui-native';
+import { Button, Input, TextField } from 'heroui-native';
 
 import { useProjectStore } from '../../src/store/useProjectStore';
+import { useProjectsStore } from '../../src/store/useProjectsStore';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { StepBadge } from '../../components/ui/StepBadge';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { FieldCard } from '../../components/ui/FieldCard';
 import { parseLocalISODate, toLocalISODate } from '../../src/utils/date';
 import { DEFAULT_INSTITUTION } from '../../src/utils/fichePdf';
 
-const INSTITUTION_LABELS = [
-  'Ligne 1 (petite)',
-  'Ligne 2 (petite)',
-  'Ligne 3 (grande)',
-  'Ligne 4 (grande)',
+const INSTITUTION_FIELDS = [
+  {
+    label: 'République',
+    placeholder: 'Ex : République Tunisienne',
+    returnKeyType: 'next' as const,
+  },
+  {
+    label: 'Agence',
+    placeholder: "Ex : Nom de l'agence",
+    returnKeyType: 'next' as const,
+  },
+  {
+    label: 'Nature des travaux',
+    placeholder: 'Ex : Description des travaux',
+    returnKeyType: 'next' as const,
+  },
+  {
+    label: 'Localisation',
+    placeholder: 'Dans la commune de …',
+    returnKeyType: 'done' as const,
+  },
 ];
 
 export default function HeaderScreen() {
   const router = useRouter();
+  const { colors, isDark } = useAppTheme();
   const [showPicker, setShowPicker] = useState(false);
   const {
     receptionNumber,
@@ -36,6 +55,58 @@ export default function HeaderScreen() {
     typeIntervention,
     setHeader,
   } = useProjectStore();
+
+  const { projects, activeProjectId } = useProjectsStore();
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+
+  const hasRunStartup = useRef(false);
+
+  useEffect(() => {
+    if (hasRunStartup.current) return;
+    hasRunStartup.current = true;
+
+    const projectState = useProjectStore.getState();
+    const projectsState = useProjectsStore.getState();
+
+    const hasContent =
+      !!projectState.receptionNumber ||
+      !!projectState.repere ||
+      (projectState.profiles?.length ?? 0) > 0;
+
+    const activeId = projectsState.activeProjectId;
+    const isAlreadySaved =
+      activeId !== null &&
+      projectsState.projects.some((p) => p.id === activeId);
+
+    if (!isAlreadySaved) {
+      if (hasContent) {
+        // Auto-sauvegarder en "Non terminé"
+        projectsState.saveOrUpdateProject({
+          id: null, // force création d'un nouveau
+          name: 'Non terminé',
+          status: 'En cours',
+          receptionNumber: projectState.receptionNumber,
+          vNumber: projectState.vNumber,
+          date: projectState.date,
+          typeIntervention: projectState.typeIntervention,
+          institutionLines: projectState.institutionLines,
+          repere: projectState.repere,
+          alt: projectState.alt,
+          lectureArriere: projectState.lectureArriere,
+          pc: projectState.pc,
+          profiles: projectState.profiles,
+          logoClient: projectState.logoClient,
+          logoEntreprise: projectState.logoEntreprise,
+          logoBureau: projectState.logoBureau,
+        });
+      }
+
+      // Toujours réinitialiser pour démarrer sur une ardoise vierge
+      projectState.resetProject();
+      // Effacer l'activeProjectId pour ne pas rouvrir le dernier chantier
+      useProjectsStore.setState({ activeProjectId: null });
+    }
+  }, []);
 
   const handleNext = () => {
     router.push('/reference' as Href);
@@ -51,8 +122,12 @@ export default function HeaderScreen() {
       })
     : null;
 
+  const inputClass = isDark
+    ? 'bg-slate-700 border-slate-600 text-slate-50'
+    : 'bg-slate-100 border-slate-300 text-slate-900';
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAwareScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 160 }}
@@ -71,40 +146,55 @@ export default function HeaderScreen() {
           subtitle="Informations générales du chantier"
         />
 
+        {activeProject && (
+          <View
+            style={{
+              backgroundColor: colors.accentBorder ?? 'rgba(245,158,11,0.15)',
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              marginBottom: 12,
+              alignSelf: 'flex-start',
+            }}
+          >
+            <Text style={{ color: colors.accent }} className="text-xs font-bold">
+              📂 {activeProject.name}
+            </Text>
+          </View>
+        )}
+
         {/* ─── Identification card ─── */}
         <FieldCard>
           {/* Section label */}
           <View className="flex-row items-center gap-2 mb-4">
             <View className="w-1 h-5 bg-amber-400 rounded-full" />
-            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
               Identification
             </Text>
           </View>
 
           {/* Réception N° */}
           <TextField className="mb-4">
-            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
               Réception N°
-            </Label>
+            </Text>
             <Input
-              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
-              placeholder="Ex : 01/2024"
-              placeholderTextColor="#64748b"
+              className={`${inputClass} rounded-xl h-13`}
+              placeholderTextColor={colors.textDim}
               value={receptionNumber}
               onChangeText={(t) => setHeader({ receptionNumber: t })}
               returnKeyType="next"
             />
           </TextField>
 
-          {/* V */}
+          {/* Voie */}
           <TextField className="mb-4">
-            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              V
-            </Label>
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
+              Voie
+            </Text>
             <Input
-              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
-              placeholder="Ex : 02"
-              placeholderTextColor="#64748b"
+              className={`${inputClass} rounded-xl h-13`}
+              placeholderTextColor={colors.textDim}
               value={vNumber}
               onChangeText={(t) => setHeader({ vNumber: t })}
               returnKeyType="done"
@@ -113,22 +203,29 @@ export default function HeaderScreen() {
 
           {/* Date de réception */}
           <View className="mb-1">
-            <Text className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
               Date de réception
             </Text>
             <TouchableOpacity
               activeOpacity={0.75}
               onPress={() => setShowPicker(true)}
-              className="bg-slate-700 border border-slate-600 rounded-xl px-4 justify-center"
-              style={{ height: 52 }}
+              style={{
+                height: 52,
+                backgroundColor: colors.inputBg,
+                borderColor: colors.inputBorder,
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                justifyContent: 'center',
+              }}
             >
               <View className="flex-row items-center justify-between">
                 <Text
-                  className={
-                    formattedDate
-                      ? 'text-slate-50 text-base font-medium'
-                      : 'text-slate-500 text-base'
-                  }
+                  style={{
+                    color: formattedDate ? colors.text : colors.textDim,
+                    fontSize: 16,
+                    fontWeight: '500',
+                  }}
                 >
                   {formattedDate ?? 'Sélectionner la date'}
                 </Text>
@@ -158,23 +255,23 @@ export default function HeaderScreen() {
         <FieldCard>
           <View className="flex-row items-center gap-2 mb-4">
             <View className="w-1 h-5 bg-amber-400 rounded-full" />
-            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
               {"Type d'intervention"}
             </Text>
           </View>
 
           <TextField>
-            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
               Voirie projetée
-            </Label>
+            </Text>
             <Input
-              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl"
+              className={`${inputClass} rounded-xl`}
               multiline
               numberOfLines={4}
               value={typeIntervention}
               onChangeText={(t) => setHeader({ typeIntervention: t })}
               placeholder="Ex : Pose de bordures T2, Décaissement et Réglage..."
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textDim}
               textAlignVertical="top"
               style={{ minHeight: 96, paddingTop: 12 }}
             />
@@ -185,29 +282,31 @@ export default function HeaderScreen() {
         <FieldCard>
           <View className="flex-row items-center gap-2 mb-1">
             <View className="w-1 h-5 bg-amber-400 rounded-full" />
-            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
               En-tête du document
             </Text>
           </View>
-          <Text className="text-slate-500 text-xs mb-4 leading-relaxed">
-            Texte du cadre central entre les logos. Pré-rempli avec l’en-tête ENNOUR, modifiable pour chaque fiche.
+          <Text style={{ color: colors.textDim }} className="text-xs mb-4 leading-relaxed">
+            Texte du cadre central entre les logos..
           </Text>
 
-          {INSTITUTION_LABELS.map((label, i) => (
-            <TextField key={label} className="mb-3">
-              <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                {label}
-              </Label>
+          {INSTITUTION_FIELDS.map((field, i) => (
+            <TextField key={field.label} className="mb-3">
+              <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
+                {field.label}
+              </Text>
               <Input
-                className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+                className={`${inputClass} rounded-xl h-13`}
                 value={institutionLines[i]}
+                placeholder={field.placeholder}
+                placeholderTextColor={colors.textDim}
                 autoCapitalize="characters"
                 onChangeText={(t) => {
                   const next = [...institutionLines] as typeof institutionLines;
                   next[i] = t;
                   setHeader({ institutionLines: next });
                 }}
-                returnKeyType={i === 3 ? 'done' : 'next'}
+                returnKeyType={field.returnKeyType}
               />
             </TextField>
           ))}
@@ -219,8 +318,8 @@ export default function HeaderScreen() {
               setHeader({ institutionLines: [...DEFAULT_INSTITUTION] as typeof institutionLines })
             }
           >
-            <Button.Label className="font-bold text-xs text-slate-300">
-              Rétablir l’en-tête ENNOUR
+            <Button.Label style={{ color: colors.textMuted }} className="font-bold text-xs">
+              {"Réinitialiser l'en-tête"}
             </Button.Label>
           </Button>
         </FieldCard>
@@ -240,15 +339,24 @@ export default function HeaderScreen() {
         </Button>
 
         {/* ── Bottom links row ── */}
-        <View className="flex-row gap-3 mt-3">
+        <View className="flex-row gap-2 mt-3">
+          <Button
+            variant="outline"
+            size="md"
+            onPress={() => router.push('/pdf-preview' as Href)}
+            className="flex-1"
+          >
+            <Text className="mr-1 text-base">👁️</Text>
+            <Button.Label className="font-bold text-xs" style={{ color: colors.textMuted }}>Aperçu PDF</Button.Label>
+          </Button>
           <Button
             variant="outline"
             size="md"
             onPress={() => router.push('/projects' as Href)}
             className="flex-1"
           >
-            <Text className="mr-2 text-base">🏗️</Text>
-            <Button.Label className="font-bold text-slate-300">Chantiers</Button.Label>
+            <Text className="mr-1 text-base">🏗️</Text>
+            <Button.Label className="font-bold text-xs" style={{ color: colors.textMuted }}>Chantiers</Button.Label>
           </Button>
           <Button
             variant="outline"
@@ -256,8 +364,8 @@ export default function HeaderScreen() {
             onPress={() => router.push('/settings' as Href)}
             className="flex-1"
           >
-            <Text className="mr-2 text-base">⚙️</Text>
-            <Button.Label className="font-bold text-slate-300">Paramètres</Button.Label>
+            <Text className="mr-1 text-base">⚙️</Text>
+            <Button.Label className="font-bold text-xs" style={{ color: colors.textMuted }}>Paramètres</Button.Label>
           </Button>
         </View>
       </KeyboardAwareScrollView>

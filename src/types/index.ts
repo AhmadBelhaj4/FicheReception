@@ -38,9 +38,10 @@ export interface ProjectState {
   // Step 3: Profiles
   profiles: ProfileData[];
 
-  // Partner / Client / Bureau logos specific to this fiche
-  logoClient: string | null; // e.g. ARRU / Maître d'Ouvrage (left)
-  logoBureau: string | null; // e.g. Bureau de Contrôle / SOIT (right)
+  // Partner / Client / Enterprise / Bureau logos specific to this fiche
+  logoClient: string | null; // e.g. Maître d'Ouvrage (left 1)
+  logoEntreprise: string | null; // e.g. Entreprise (left 2)
+  logoBureau: string | null; // e.g. Bureau de Contrôle (right)
 
   // Actions
   setHeader: (data: HeaderData) => void;
@@ -49,7 +50,7 @@ export interface ProjectState {
   updateProfile: (id: string, data: Partial<ProfileData>) => void;
   deleteProfile: (id: string) => void;
   duplicateProfile: (id: string) => void;
-  setLogos: (logos: { logoClient?: string | null; logoBureau?: string | null }) => void;
+  setLogos: (logos: { logoClient?: string | null; logoEntreprise?: string | null; logoBureau?: string | null }) => void;
   resetProject: () => void;
 }
 
@@ -76,6 +77,7 @@ export interface SavedProject {
   pc: number | null;
   profiles: ProfileData[];
   logoClient?: string | null;
+  logoEntreprise?: string | null;
   logoBureau?: string | null;
 }
 
@@ -91,4 +93,5 @@ export interface ProjectsState {
   updateProjectStatus: (id: string, status: ProjectStatus) => void;
   deleteProject: (id: string) => void;
   archiveProject: (id: string) => void;
+  renameProject: (id: string, name: string) => void;
 }

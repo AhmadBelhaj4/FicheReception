@@ -6,7 +6,7 @@ import { ProjectsState, SavedProject, ProjectStatus } from '../types';
 import { zustandStorage } from './storage';
 import { toLocalISODate } from '../utils/date';
 import { DEFAULT_INSTITUTION } from '../utils/fichePdf';
-import { DEFAULT_LOGO_ARRU, DEFAULT_LOGO_SOIT } from '../assets/defaultLogos';
+import { DEFAULT_LOGO_ARRU, DEFAULT_LOGO_SAMED, DEFAULT_LOGO_SOIT } from '../assets/defaultLogos';
 
 export const useProjectsStore = create<ProjectsState>()(
   persist(
@@ -34,6 +34,7 @@ export const useProjectsStore = create<ProjectsState>()(
           pc: null,
           profiles: [],
           logoClient: DEFAULT_LOGO_ARRU,
+          logoEntreprise: DEFAULT_LOGO_SAMED,
           logoBureau: DEFAULT_LOGO_SOIT,
         };
         set((state) => ({
@@ -61,7 +62,7 @@ export const useProjectsStore = create<ProjectsState>()(
 
       saveOrUpdateProject: (data) => {
         const { activeProjectId, projects } = get();
-        const targetId = data.id || activeProjectId;
+        const targetId = data.id !== undefined ? data.id : activeProjectId;
         const now = toLocalISODate();
 
         if (targetId && projects.some((p) => p.id === targetId)) {
@@ -105,6 +106,7 @@ export const useProjectsStore = create<ProjectsState>()(
           pc: data.pc ?? null,
           profiles: data.profiles || [],
           logoClient: data.logoClient ?? null,
+          logoEntreprise: data.logoEntreprise ?? null,
           logoBureau: data.logoBureau ?? null,
         };
 
@@ -134,6 +136,16 @@ export const useProjectsStore = create<ProjectsState>()(
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === id ? { ...p, status: 'Archivé' as ProjectStatus, updatedAt: toLocalISODate() } : p
+          ),
+        }));
+      },
+
+      renameProject: (id: string, name: string) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id
+              ? { ...p, name: name.trim(), updatedAt: toLocalISODate() }
+              : p
           ),
         }));
       },

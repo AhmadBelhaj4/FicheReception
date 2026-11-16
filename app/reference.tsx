@@ -5,21 +5,27 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter, Href } from 'expo-router';
-import { Button, Input, Label, TextField } from 'heroui-native';
+import { Button, Input, TextField } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
+import { useAppTheme } from '../src/hooks/useAppTheme';
 import { StepBadge } from '../components/ui/StepBadge';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
 import { FieldCard } from '../components/ui/FieldCard';
 
 export default function ReferenceScreen() {
   const router = useRouter();
+  const { colors, isDark } = useAppTheme();
   const { repere, alt, lectureArriere, pc, setReference } = useProjectStore();
 
   const [altText, setAltText] = useState(alt !== null ? alt.toString() : '');
   const [lecText, setLecText] = useState(
     lectureArriere !== null ? lectureArriere.toString() : ''
   );
+
+  const inputClass = isDark
+    ? 'bg-slate-700 border-slate-600 text-slate-50'
+    : 'bg-slate-100 border-slate-300 text-slate-900';
 
   // Keep local input text in sync if store values are reset or changed externally
   const [prevAlt, setPrevAlt] = useState(alt);
@@ -75,7 +81,7 @@ export default function ReferenceScreen() {
 
   return (
     <KeyboardAwareScrollView
-      style={{ flex: 1, backgroundColor: '#0f172a' }}
+      style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 160 }}
       keyboardShouldPersistTaps="handled"
       enableOnAndroid={true}
@@ -96,20 +102,20 @@ export default function ReferenceScreen() {
       <FieldCard>
         <View className="flex-row items-center gap-2 mb-4">
           <View className="w-1 h-5 bg-amber-400 rounded-full" />
-          <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+          <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
             Point de référence
           </Text>
         </View>
 
         {/* Repère */}
         <TextField className="mb-4">
-          <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+          <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
             Repère (borne ou point fixe)
-          </Label>
+          </Text>
           <Input
-            className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
-            placeholder="Ex : TN 01, Borne A, Clou..."
-            placeholderTextColor="#64748b"
+            className={`${inputClass} rounded-xl h-13`}
+            placeholder="Ex : Clou de géomètre, Borne A..."
+            placeholderTextColor={colors.textDim}
             value={repere}
             onChangeText={(t) => setReference({ repere: t })}
             returnKeyType="next"
@@ -119,28 +125,28 @@ export default function ReferenceScreen() {
         {/* ALT (Z) + LAR row */}
         <View className="flex-row gap-3">
           <TextField className="flex-1">
-            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
               Altitude Z (m)
-            </Label>
+            </Text>
             <Input
-              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+              className={`${inputClass} rounded-xl h-13`}
               keyboardType="decimal-pad"
-              placeholder="16.530"
-              placeholderTextColor="#64748b"
+              placeholder="Ex : 16.530"
+              placeholderTextColor={colors.textDim}
               value={altText}
               onChangeText={handleAltChange}
             />
           </TextField>
 
           <TextField className="flex-1">
-            <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold uppercase tracking-wider mb-1.5">
               Lect. Arrière (m)
-            </Label>
+            </Text>
             <Input
-              className="bg-slate-700 border-slate-600 text-slate-50 rounded-xl h-13"
+              className={`${inputClass} rounded-xl h-13`}
               keyboardType="decimal-pad"
-              placeholder="1.310"
-              placeholderTextColor="#64748b"
+              placeholder="Ex : 1.310"
+              placeholderTextColor={colors.textDim}
               value={lecText}
               onChangeText={handleLecChange}
             />
@@ -150,47 +156,42 @@ export default function ReferenceScreen() {
 
       {/* ─── P.C. result card ─── */}
       <View
-        className={[
-          'rounded-2xl p-5 mb-5 border items-center',
-          pcReady
-            ? 'bg-slate-800 border-amber-400'
-            : 'bg-slate-800 border-slate-700',
-        ].join(' ')}
+        style={{
+          backgroundColor: colors.card,
+          borderColor: pcReady ? colors.accent : colors.cardBorder,
+        }}
+        className="rounded-2xl p-5 mb-5 border items-center"
       >
         {/* Formula label */}
         <View className="flex-row items-center gap-2 mb-3">
           <View
-            className={['w-1 h-5 rounded-full', pcReady ? 'bg-amber-400' : 'bg-slate-600'].join(' ')}
+            style={{ width: 4, height: 20, borderRadius: 9999, backgroundColor: pcReady ? colors.accent : colors.cardBorder }}
           />
-          <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+          <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
             Plan de Comparaison
           </Text>
         </View>
 
         {/* Formula */}
-        <Text className="text-slate-500 text-xs font-semibold tracking-wider mb-2 uppercase">
+        <Text style={{ color: colors.textDim }} className="text-xs font-semibold tracking-wider mb-2 uppercase">
           P.C. = ALT (Z) + LAR
         </Text>
 
         {/* Big value */}
         <Text
-          className={[
-            'font-black text-5xl tracking-tight',
-            pcReady ? 'text-amber-400' : 'text-slate-600',
-          ].join(' ')}
+          style={{ color: pcReady ? colors.accent : colors.textDim }}
+          className="font-black text-5xl tracking-tight"
         >
           {pcReady ? `${pc!.toFixed(3)}` : '---'}
         </Text>
         {pcReady && (
-          <Text className="text-amber-500 text-xs font-semibold mt-1">mètres NGT</Text>
+          <Text style={{ color: colors.accent }} className="text-xs font-semibold mt-1">mètres NGT</Text>
         )}
 
         {/* Helper text */}
         <Text
-          className={[
-            'text-xs text-center mt-3 px-4',
-            pcReady ? 'text-slate-400' : 'text-slate-600',
-          ].join(' ')}
+          style={{ color: pcReady ? colors.textMuted : colors.textDim }}
+          className="text-xs text-center mt-3 px-4"
         >
           {pcReady
             ? 'Calculé automatiquement · utilisé pour tous les profils'
@@ -206,7 +207,7 @@ export default function ReferenceScreen() {
           onPress={() => router.back()}
           className="flex-none px-5"
         >
-          <Button.Label className="font-bold">← Retour</Button.Label>
+          <Button.Label style={{ color: colors.text }} className="font-bold">← Retour</Button.Label>
         </Button>
 
         <Button
@@ -223,6 +224,16 @@ export default function ReferenceScreen() {
           <Text className="text-white text-lg ml-1">→</Text>
         </Button>
       </View>
+
+      <Button
+        variant="outline"
+        size="md"
+        onPress={() => router.push('/pdf-preview' as Href)}
+        className="mt-3"
+      >
+        <Text className="mr-2 text-base">👁️</Text>
+        <Button.Label className="font-bold" style={{ color: colors.textMuted }}>Aperçu PDF</Button.Label>
+      </Button>
     </KeyboardAwareScrollView>
   );
 }

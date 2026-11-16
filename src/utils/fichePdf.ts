@@ -96,7 +96,7 @@ const SHADED_ROWS = new Set([1, 4]);
 /** Placeholder dots, exactly as printed on the blank original. */
 const DOTS = {
   reception: '…'.repeat(16),
-  v: '…'.repeat(4) + '...',
+  v : '…'.repeat(4) + '...',
   date: '…'.repeat(9),
   type: '…'.repeat(29) + '...',
   repere: '…'.repeat(3) + '..',
@@ -109,12 +109,12 @@ const DOTS = {
 /** The institutional box text is "condensed by 1 pt" in the original. */
 const INST_LS = -1;
 
-/** Default institutional box text, exactly as printed on the original (spacing included). */
+/** Default institutional box text. */
 export const DEFAULT_INSTITUTION: [string, string, string, string] = [
   'REPUBLIQUE TUNISIENNE',
-  'AGENCE DE  RÉHABILITATION  ET   DE  RENOVATION   URBAINE',
-  'TRAVAUX DE REHABILITATION DU QUARTIER ENNOUR',
-  'DANS LA COMMUNE DE KASSERINE',
+  'AGENCE DE ',
+  'TRAVAUX DE ',
+  '',
 ];
 
 /** Word anchors text near the top of the 18 pt rows: ink sits 2.3 pt above CSS centring. */
@@ -298,7 +298,7 @@ function renderPage(
   }
   // Header lines keep their inner spacing (the original uses double spaces) – trim only.
   const inst = input.institution.map((l) => String(l ?? '').replace(/[\r\n]+/g, ' ').trim().toUpperCase());
-  const instSpec: Array<{ cy: number; base: number; min: number; x0: number; x1: number }> = [
+  const instSpec: { cy: number; base: number; min: number; x0: number; x1: number }[] = [
     { cy: 22.8, base: 10, min: 6.5, x0: 154, x1: 461.4 },
     { cy: 35.05, base: 10, min: 6.5, x0: 154, x1: 461.4 },
     { cy: 54.95, base: 13, min: 7.5, x0: 154, x1: 461.8 },
@@ -356,7 +356,7 @@ function renderPage(
 
   // ── Column header ──
   const H = [164.2, 199.1];
-  const head: Array<[number, number, string]> = [
+  const head: [number, number, string][] = [
     [X[0], X[2], 'N° PROFIL'],
     [X[2], X[3], 'LECTURE AV'],
     [X[3], X[4], 'COTE<br>RECEPTION<br>(PRATIQUE)'],
@@ -487,7 +487,7 @@ function renderPage(
     [43.6, 'BUREAU DE CONTROLE'],
     [283.9, 'ARRU'],
     [475.4, 'ENTREPRISE'],
-  ] as Array<[number, string]>) {
+  ] as [number, string][]) {
     txt(x, 716.87, x + 150, 733.96, label, { font: 'FicheSans', size: 14, align: 'l', ls: INST_LS, dy: FOOT_DY });
   }
 

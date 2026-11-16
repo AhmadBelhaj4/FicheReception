@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { Button } from 'heroui-native';
 
 import { useProjectStore } from '../src/store/useProjectStore';
+import { useAppTheme } from '../src/hooks/useAppTheme';
 import {
   calculateCotePratique,
   calculateDifference,
@@ -20,6 +21,7 @@ import { StepBadge } from '../components/ui/StepBadge';
 
 export default function ProfilesListScreen() {
   const router = useRouter();
+  const { colors, isDark } = useAppTheme();
   const { profiles, pc, repere, addProfile, deleteProfile, duplicateProfile } = useProjectStore();
 
   const handleAddProfile = () => {
@@ -96,32 +98,31 @@ export default function ProfilesListScreen() {
         ? `Déblai  ${diffAxe.toFixed(3)} m`
         : 'Conforme  0.000 m';
 
-    const badgeBg = diffAxe === null
-      ? 'bg-slate-700'
-      : isRemblai
-      ? 'bg-emerald-900'
-      : isDeblai
-      ? 'bg-red-900'
-      : 'bg-slate-700';
-
-    const badgeText = diffAxe === null
-      ? 'text-slate-400'
-      : isRemblai
-      ? 'text-emerald-300'
-      : isDeblai
-      ? 'text-red-300'
-      : 'text-slate-300';
-
+    const badgeStyle = {
+      backgroundColor: diffAxe === null
+        ? (isDark ? '#334155' : '#e2e8f0')
+        : isRemblai
+        ? (isDark ? '#064e3b' : '#d1fae5')
+        : isDeblai
+        ? (isDark ? '#7f1d1d' : '#fee2e2')
+        : (isDark ? '#334155' : '#e2e8f0'),
+    };
+    const badgeTextColor = diffAxe === null
+      ? colors.textMuted
+      : isRemblai ? colors.success
+      : isDeblai ? colors.danger
+      : colors.textMuted;
     const diffValueColor = diffAxe === null
-      ? 'text-slate-500'
-      : isRemblai
-      ? 'text-emerald-400'
-      : isDeblai
-      ? 'text-red-400'
-      : 'text-slate-400';
+      ? colors.textDim
+      : isRemblai ? colors.success
+      : isDeblai ? colors.danger
+      : colors.textMuted;
 
     return (
-      <View className="bg-slate-800 rounded-2xl p-4 mb-3 border border-slate-700">
+      <View
+        style={{ backgroundColor: colors.card, borderColor: colors.cardBorder }}
+        className="rounded-2xl p-4 mb-3 border"
+      >
         {/* Card header row */}
         <View className="flex-row items-center justify-between mb-3">
           <View className="bg-amber-400 rounded-lg px-3 py-1">
@@ -135,14 +136,14 @@ export default function ProfilesListScreen() {
               size="sm"
               onPress={() => handleEditProfile(item.id)}
             >
-              <Button.Label className="font-bold">Modifier</Button.Label>
+              <Button.Label style={{ color: colors.text }} className="font-bold">Modifier</Button.Label>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onPress={() => handleDuplicateProfile(item.id)}
             >
-              <Button.Label className="font-bold text-amber-400">Dupliquer</Button.Label>
+              <Button.Label style={{ color: colors.accent }} className="font-bold">Dupliquer</Button.Label>
             </Button>
             <Button
               variant="danger-soft"
@@ -150,36 +151,36 @@ export default function ProfilesListScreen() {
               isIconOnly
               onPress={() => handleDeleteProfile(item.id, index)}
             >
-              <Text className="text-red-400 font-bold text-sm">✕</Text>
+              <Text style={{ color: colors.danger }} className="font-bold text-sm">✕</Text>
             </Button>
           </View>
         </View>
 
         {/* Metrics row */}
-        <View className="flex-row bg-slate-900 rounded-xl p-3 mb-3">
+        <View style={{ backgroundColor: isDark ? '#0f172a' : '#f1f5f9' }} className="flex-row rounded-xl p-3 mb-3">
           <View className="flex-1 items-center">
-            <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
+            <Text style={{ color: colors.textDim }} className="text-xs font-bold uppercase tracking-wider mb-1">
               Lec. Axe
             </Text>
-            <Text className="text-slate-200 text-sm font-bold">
+            <Text style={{ color: colors.text }} className="text-sm font-bold">
               {item.axe !== null ? `${item.axe.toFixed(3)} m` : '–'}
             </Text>
           </View>
-          <View className="w-px bg-slate-700 mx-1" />
+          <View style={{ backgroundColor: colors.cardBorder }} className="w-px mx-1" />
           <View className="flex-1 items-center">
-            <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
+            <Text style={{ color: colors.textDim }} className="text-xs font-bold uppercase tracking-wider mb-1">
               Cote Projet
             </Text>
-            <Text className="text-slate-200 text-sm font-bold">
+            <Text style={{ color: colors.text }} className="text-sm font-bold">
               {item.coteProjet !== null ? `${item.coteProjet.toFixed(3)} m` : '–'}
             </Text>
           </View>
-          <View className="w-px bg-slate-700 mx-1" />
+          <View style={{ backgroundColor: colors.cardBorder }} className="w-px mx-1" />
           <View className="flex-1 items-center">
-            <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">
+            <Text style={{ color: colors.textDim }} className="text-xs font-bold uppercase tracking-wider mb-1">
               Diff. Axe
             </Text>
-            <Text className={`text-sm font-black ${diffValueColor}`}>
+            <Text style={{ color: diffValueColor }} className="text-sm font-black">
               {diffAxe !== null
                 ? isRemblai
                   ? `+${diffAxe.toFixed(3)}`
@@ -191,11 +192,11 @@ export default function ProfilesListScreen() {
 
         {/* Status pill + obs */}
         <View className="flex-row items-center justify-between">
-          <View className={`${badgeBg} rounded-lg px-3 py-1.5`}>
-            <Text className={`${badgeText} text-xs font-bold`}>{diffLabel}</Text>
+          <View style={badgeStyle} className="rounded-lg px-3 py-1.5">
+            <Text style={{ color: badgeTextColor }} className="text-xs font-bold">{diffLabel}</Text>
           </View>
           {item.observation ? (
-            <Text className="text-slate-500 text-xs italic max-w-[45%]" numberOfLines={1}>
+            <Text style={{ color: colors.textMuted }} className="text-xs italic max-w-[45%]" numberOfLines={1}>
               {item.observation}
             </Text>
           ) : null}
@@ -205,23 +206,23 @@ export default function ProfilesListScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* ── Sticky header ── */}
-      <View className="px-5 pt-5 pb-3 border-b border-slate-800">
+      <View style={{ borderBottomColor: colors.cardBorder }} className="px-5 pt-5 pb-3 border-b">
         <View className="flex-row items-center justify-between mb-2">
           <StepBadge current={3} total={4} />
           {/* P.C. context pill */}
-          <View className="bg-slate-800 border border-amber-400/40 rounded-lg px-3 py-1">
-            <Text className="text-amber-400 text-xs font-bold">
+          <View style={{ backgroundColor: colors.card, borderColor: colors.accentBorder }} className="border rounded-lg px-3 py-1">
+            <Text style={{ color: colors.accent }} className="text-xs font-bold">
               P.C.{' '}
               {pc !== null ? `${pc.toFixed(3)} m` : '–'}
             </Text>
           </View>
         </View>
-        <Text className="text-xl font-black text-slate-50 tracking-tight">
+        <Text style={{ color: colors.text }} className="text-xl font-black tracking-tight">
           Profils en Travers
         </Text>
-        <Text className="text-slate-400 text-sm mt-0.5">
+        <Text style={{ color: colors.textMuted }} className="text-sm mt-0.5">
           {profiles.length === 0
             ? 'Ajoutez les profils relevés sur le terrain.'
             : `${profiles.length} profil(s) enregistré(s)${repere ? `  ·  Repère : ${repere}` : ''}`}
@@ -247,10 +248,10 @@ export default function ProfilesListScreen() {
       {profiles.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
           <Text className="text-5xl mb-4">📐</Text>
-          <Text className="text-slate-200 text-lg font-black text-center mb-2">
+          <Text style={{ color: colors.text }} className="text-lg font-black text-center mb-2">
             Aucun profil enregistré
           </Text>
-          <Text className="text-slate-500 text-sm text-center leading-relaxed">
+          <Text style={{ color: colors.textMuted }} className="text-sm text-center leading-relaxed">
             Appuyez sur le bouton ci-dessus pour saisir les lectures avant (D2, D1, Axe, G1, G2) et cotes projets.
           </Text>
         </View>
@@ -265,14 +266,24 @@ export default function ProfilesListScreen() {
       )}
 
       {/* ── Footer nav ── */}
-      <View className="flex-row gap-3 px-5 py-4 border-t border-slate-800 bg-slate-900">
+      <View style={{ borderTopColor: colors.cardBorder, backgroundColor: colors.card }} className="flex-row gap-2 px-4 py-4 border-t">
         <Button
           variant="outline"
           size="lg"
           onPress={() => router.back()}
-          className="flex-none px-5"
+          className="flex-none px-4"
         >
-          <Button.Label className="font-bold">← Retour</Button.Label>
+          <Button.Label style={{ color: colors.text }} className="font-bold">← Retour</Button.Label>
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          onPress={() => router.push('/pdf-preview' as Href)}
+          className="flex-1"
+        >
+          <Text className="mr-1 text-base">👁️</Text>
+          <Button.Label className="font-bold text-xs" style={{ color: colors.textMuted }}>Aperçu PDF</Button.Label>
         </Button>
 
         <Button
@@ -283,10 +294,10 @@ export default function ProfilesListScreen() {
           onPress={() => router.push('/preview' as Href)}
           className="flex-1"
         >
-          <Button.Label className="font-bold tracking-wide">
-            Export PDF
+          <Button.Label className="font-bold tracking-wide text-xs">
+            Finaliser
           </Button.Label>
-          <Text className="text-white text-lg ml-1">→</Text>
+          <Text className="text-white text-base ml-0.5">→</Text>
         </Button>
       </View>
     </View>

@@ -1,149 +1,129 @@
 // app/settings.tsx
-// App settings: company logo upload (embedded in PDF header) and tolerance threshold.
+// App settings: Theme (system/light/dark), tolerance threshold (✓ / ⚠).
 import React from 'react';
 import {
-  Alert,
-  Image,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Button } from 'heroui-native';
 
-import { useSettingsStore } from '../src/store/useSettingsStore';
+import { useSettingsStore, AppTheme } from '../src/store/useSettingsStore';
+import { useAppTheme } from '../src/hooks/useAppTheme';
 
 export default function SettingsScreen() {
-  const { logoBase64, toleranceM, setLogo, setTolerance } = useSettingsStore();
-
-  const handlePickLogo = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        'Permission requise',
-        "L'accès à la galerie est nécessaire pour sélectionner un logo."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      if (asset.base64) {
-        // Determine MIME type from URI extension
-        const uri = asset.uri.toLowerCase();
-        const mime = uri.endsWith('.png') ? 'image/png' : 'image/jpeg';
-        setLogo(`data:${mime};base64,${asset.base64}`);
-      } else if (asset.uri) {
-        // Fallback: read file as base64
-        const base64 = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        setLogo(`data:image/jpeg;base64,${base64}`);
-      }
-    }
-  };
-
-  const handleRemoveLogo = () => {
-    Alert.alert(
-      'Supprimer le logo',
-      'Supprimer le logo de tous les PDF futurs ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => setLogo(null) },
-      ]
-    );
-  };
+  const { toleranceM, setTolerance } = useSettingsStore();
+  const { theme, setTheme, colors } = useAppTheme();
 
   const toleranceCm = Math.round(toleranceM * 100);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Company Logo ── */}
-        <View style={{ backgroundColor: '#1e293b', borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#334155' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <View style={{ width: 4, height: 20, backgroundColor: '#f59e0b', borderRadius: 2 }} />
-            <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              Logo Entreprise / Bureau
+        {/* ── Theme Selection ── */}
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 20,
+            padding: 20,
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: colors.cardBorder,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <View style={{ width: 4, height: 20, backgroundColor: colors.accent, borderRadius: 2 }} />
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontSize: 11,
+                fontWeight: '700',
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+              }}
+            >
+              {"Thème de l'application"}
             </Text>
           </View>
 
-          <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
-            {"Le logo s'affiche à gauche de l'en-tête de chaque PDF, à droite du logo client (emplacement 80 × 46 pt).\nFormat recommandé : PNG à fond transparent, rapport 16:9."}
+          <Text style={{ color: colors.textDim, fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
+            {"Choisissez l'apparence visuelle de l'application. En mode Système, l'app suit automatiquement le réglage de votre téléphone."}
           </Text>
 
-          {logoBase64 ? (
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}>Aperçu :</Text>
-              <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                <Image
-                  source={{ uri: logoBase64 }}
-                  style={{ width: '100%', height: 60, resizeMode: 'contain' }}
-                />
-              </View>
-            </View>
-          ) : (
-            <View style={{ backgroundColor: '#0f172a', borderRadius: 12, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#1e293b', borderStyle: 'dashed' }}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>🏢</Text>
-              <Text style={{ color: '#475569', fontSize: 13, textAlign: 'center' }}>
-                Aucun logo sélectionné{'\n'}L'emplacement restera vide dans le PDF
-              </Text>
-            </View>
-          )}
-
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button
-              variant="primary"
-              size="lg"
-              feedbackVariant="scale-ripple"
-              onPress={handlePickLogo}
-              className="flex-1"
-            >
-              <Text style={{ marginRight: 8 }}>📁</Text>
-              <Button.Label className="font-bold">
-                {logoBase64 ? 'Changer le logo' : 'Choisir un logo'}
-              </Button.Label>
-            </Button>
-            {logoBase64 && (
-              <Button
-                variant="danger-soft"
-                size="lg"
-                isIconOnly
-                onPress={handleRemoveLogo}
-              >
-                <Text style={{ color: '#f87171', fontWeight: '700' }}>✕</Text>
-              </Button>
-            )}
+          {/* 3 Segmented Options */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {[
+              { id: 'system', label: 'Système', icon: '📱' },
+              { id: 'light', label: 'Clair', icon: '☀️' },
+              { id: 'dark', label: 'Sombre', icon: '🌙' },
+            ].map((opt) => {
+              const isSelected = theme === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  activeOpacity={0.75}
+                  onPress={() => setTheme(opt.id as AppTheme)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    backgroundColor: isSelected ? colors.accent : colors.inputBg,
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.accent : colors.inputBorder,
+                  }}
+                >
+                  <Text style={{ fontSize: 18, marginBottom: 4 }}>{opt.icon}</Text>
+                  <Text
+                    style={{
+                      color: isSelected ? '#ffffff' : colors.text,
+                      fontSize: 12,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* ── Tolerance Threshold ── */}
-        <View style={{ backgroundColor: '#1e293b', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#334155' }}>
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 20,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: colors.cardBorder,
+          }}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <View style={{ width: 4, height: 20, backgroundColor: '#f59e0b', borderRadius: 2 }} />
-            <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+            <View style={{ width: 4, height: 20, backgroundColor: colors.accent, borderRadius: 2 }} />
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontSize: 11,
+                fontWeight: '700',
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+              }}
+            >
               Tolérance (✓ / ⚠)
             </Text>
           </View>
 
-          <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
+          <Text style={{ color: colors.textDim, fontSize: 12, marginBottom: 16, lineHeight: 18 }}>
             {"Seuil en cm pour l'indicateur de conformité sur chaque point. Au-delà de ce seuil, l'écart est affiché ⚠ dans l'application et en rouge gras dans le PDF."}
           </Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Text style={{ color: '#f8fafc', fontSize: 28, fontWeight: '900' }}>
+            <Text style={{ color: colors.text, fontSize: 28, fontWeight: '900' }}>
               ± {toleranceCm} cm
             </Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -153,7 +133,7 @@ export default function SettingsScreen() {
                 isDisabled={toleranceM <= 0.01}
                 onPress={() => setTolerance(Math.max(0.01, toleranceM - 0.01))}
               >
-                <Button.Label className="font-bold text-lg">−</Button.Label>
+                <Button.Label style={{ color: colors.text }} className="font-bold text-lg">−</Button.Label>
               </Button>
               <Button
                 variant="outline"
@@ -161,40 +141,44 @@ export default function SettingsScreen() {
                 isDisabled={toleranceM >= 0.10}
                 onPress={() => setTolerance(Math.min(0.10, toleranceM + 0.01))}
               >
-                <Button.Label className="font-bold text-lg">+</Button.Label>
+                <Button.Label style={{ color: colors.text }} className="font-bold text-lg">+</Button.Label>
               </Button>
             </View>
           </View>
 
           {/* Preset buttons */}
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            {[1, 2, 3, 5].map((cm) => (
-              <TouchableOpacity
-                key={cm}
-                onPress={() => setTolerance(cm / 100)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  backgroundColor: toleranceCm === cm ? '#f59e0b' : '#0f172a',
-                  borderWidth: 1,
-                  borderColor: toleranceCm === cm ? '#f59e0b' : '#334155',
-                }}
-              >
-                <Text style={{
-                  color: toleranceCm === cm ? '#0f172a' : '#94a3b8',
-                  fontSize: 12,
-                  fontWeight: '700',
-                }}>
-                  {cm} cm
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {[1, 2, 3, 5].map((cm) => {
+              const isSelected = toleranceCm === cm;
+              return (
+                <TouchableOpacity
+                  key={cm}
+                  onPress={() => setTolerance(cm / 100)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    backgroundColor: isSelected ? colors.accent : colors.surface,
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.accent : colors.cardBorder,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: isSelected ? '#ffffff' : colors.textMuted,
+                      fontSize: 12,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {cm} cm
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
     </View>
   );
 }
-

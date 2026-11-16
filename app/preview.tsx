@@ -19,6 +19,7 @@ import { Button } from 'heroui-native';
 import { useProjectStore } from '../src/store/useProjectStore';
 import { useSettingsStore } from '../src/store/useSettingsStore';
 import { useProjectsStore } from '../src/store/useProjectsStore';
+import { useAppTheme } from '../src/hooks/useAppTheme';
 import {
   calculateCotePratique,
   calculateDifference,
@@ -53,18 +54,20 @@ export default function PreviewScreen() {
     pc,
     profiles,
     logoClient,
+    logoEntreprise,
     logoBureau,
     setLogos,
     resetProject,
   } = useProjectStore();
 
-  const { logoBase64: enterpriseLogo, toleranceM } = useSettingsStore();
+  const { toleranceM } = useSettingsStore();
   const { saveOrUpdateProject } = useProjectsStore();
+  const { colors, isDark } = useAppTheme();
 
   const formattedDate = formatDateFR(date);
 
   // ─── LOGO PICKERS ──────────────────────────────────────────────────────────
-  const handlePickLogo = async (target: 'client' | 'bureau') => {
+  const handlePickLogo = async (target: 'client' | 'entreprise' | 'bureau') => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
@@ -97,6 +100,8 @@ export default function PreviewScreen() {
       if (dataUri) {
         if (target === 'client') {
           setLogos({ logoClient: dataUri });
+        } else if (target === 'entreprise') {
+          setLogos({ logoEntreprise: dataUri });
         } else {
           setLogos({ logoBureau: dataUri });
         }
@@ -142,7 +147,7 @@ export default function PreviewScreen() {
         lectureArriere,
         pc,
         profiles: models,
-        logos: { client: logoClient, enterprise: enterpriseLogo, bureau: logoBureau },
+        logos: { client: logoClient, enterprise: logoEntreprise, bureau: logoBureau },
       },
       { fontCss: FICHE_FONT_CSS, metrics: FICHE_METRICS },
       { unit: Platform.OS === 'ios' ? 'px' : 'pt' }
@@ -309,6 +314,7 @@ export default function PreviewScreen() {
       pc,
       profiles,
       logoClient,
+      logoEntreprise,
       logoBureau,
       status: 'En cours',
     });
@@ -339,7 +345,7 @@ export default function PreviewScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
         contentContainerClassName="px-5 pt-6 pb-10"
         showsVerticalScrollIndicator={false}
@@ -351,19 +357,28 @@ export default function PreviewScreen() {
               Étape 4 / 4 — Finalisation
             </Text>
           </View>
-          <Text className="text-2xl font-black text-slate-50 text-center">
+          <Text style={{ color: colors.text }} className="text-2xl font-black text-center">
             Aperçu & Exportation PDF
           </Text>
-          <Text className="text-slate-400 text-sm text-center mt-1.5 px-4">
+          <Text style={{ color: colors.textMuted }} className="text-sm text-center mt-1.5 px-4">
             Vérifiez la synthèse ci-dessous avant d’imprimer ou de partager la fiche officielle.
           </Text>
         </View>
 
         {/* ── 1. Résumé du Chantier ── */}
-        <View className="bg-slate-800 rounded-2xl p-5 mb-4 border border-slate-700">
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.cardBorder,
+            borderWidth: 1,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 16,
+          }}
+        >
           <View className="flex-row items-center gap-2 mb-4">
-            <View className="w-1 h-5 bg-emerald-400 rounded-full" />
-            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            <View className="w-1 h-5 rounded-full" style={{ backgroundColor: colors.accent }} />
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
               1. Résumé du Chantier
             </Text>
           </View>
@@ -374,85 +389,134 @@ export default function PreviewScreen() {
             { label: 'Pages', value: `${pageCount} (5 profils par page)` },
             { label: 'Date', value: formattedDate || 'Non spécifiée' },
           ].map(({ label, value }) => (
-            <View key={label} className="flex-row justify-between py-2.5 border-b border-slate-700">
-              <Text className="text-slate-400 text-sm font-semibold">{label}</Text>
-              <Text className="text-slate-100 text-sm font-bold max-w-[55%] text-right">{value}</Text>
+            <View
+              key={label}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.cardBorder,
+              }}
+            >
+              <Text style={{ color: colors.textMuted }} className="text-sm font-semibold">{label}</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-bold max-w-[55%] text-right">{value}</Text>
             </View>
           ))}
 
           <View className="flex-row justify-between pt-2.5">
-            <Text className="text-slate-400 text-sm font-semibold">{"Type d'intervention"}</Text>
-            <Text className="text-slate-100 text-sm font-bold max-w-[55%] text-right" numberOfLines={2}>
+            <Text style={{ color: colors.textMuted }} className="text-sm font-semibold">{"Type d'intervention"}</Text>
+            <Text style={{ color: colors.text }} className="text-sm font-bold max-w-[55%] text-right" numberOfLines={2}>
               {typeIntervention || 'Non spécifié'}
             </Text>
           </View>
         </View>
 
         {/* ── 2. Données Topographiques ── */}
-        <View className="bg-slate-800 rounded-2xl p-5 mb-4 border border-slate-700">
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.cardBorder,
+            borderWidth: 1,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 16,
+          }}
+        >
           <View className="flex-row items-center gap-2 mb-4">
-            <View className="w-1 h-5 bg-emerald-400 rounded-full" />
-            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            <View className="w-1 h-5 rounded-full" style={{ backgroundColor: colors.accent }} />
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
               2. Données Topographiques
             </Text>
           </View>
 
           <View className="flex-row gap-3">
             {/* Repère */}
-            <View className="flex-1 bg-slate-900 rounded-xl p-3 items-center border border-slate-700">
-              <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Repère</Text>
-              <Text className="text-slate-100 text-sm font-black text-center">{repere || '–'}</Text>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderColor: colors.cardBorder,
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.textDim }} className="text-xs font-bold uppercase tracking-wider mb-1">Repère</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-black text-center">{repere || '–'}</Text>
             </View>
             {/* P.C. */}
-            <View className="flex-1 bg-slate-900 rounded-xl p-3 items-center border border-amber-400/30">
-              <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">P.C. Calculé</Text>
-              <Text className="text-amber-400 text-sm font-black">
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderColor: isDark ? 'rgba(245, 158, 11, 0.4)' : 'rgba(217, 119, 6, 0.4)',
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.textDim }} className="text-xs font-bold uppercase tracking-wider mb-1">P.C. Calculé</Text>
+              <Text style={{ color: colors.accent }} className="text-sm font-black">
                 {pc !== null ? `${pc.toFixed(3)} m` : '–'}
               </Text>
             </View>
             {/* Nb Profils */}
-            <View className="flex-1 bg-slate-900 rounded-xl p-3 items-center border border-slate-700">
-              <Text className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Profils</Text>
-              <Text className="text-slate-100 text-2xl font-black">{profiles.length}</Text>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderColor: colors.cardBorder,
+                borderWidth: 1,
+                borderRadius: 12,
+                padding: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.textDim }} className="text-xs font-bold uppercase tracking-wider mb-1">Profils</Text>
+              <Text style={{ color: colors.text }} className="text-2xl font-black">{profiles.length}</Text>
             </View>
           </View>
         </View>
 
         {/* ── 3. Logos du Chantier & Partenaires ── */}
-        <View className="bg-slate-800 rounded-2xl p-5 mb-5 border border-slate-700">
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.cardBorder,
+            borderWidth: 1,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 20,
+          }}
+        >
           <View className="flex-row items-center gap-2 mb-4">
-            <View className="w-1 h-5 bg-amber-400 rounded-full" />
-            <Text className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+            <View className="w-1 h-5 rounded-full" style={{ backgroundColor: colors.accent }} />
+            <Text style={{ color: colors.textMuted }} className="text-xs font-bold tracking-widest uppercase">
               3. Logos pour cette Fiche
             </Text>
           </View>
-          <Text className="text-slate-400 text-xs mb-4 leading-relaxed">
-            Placés à leur emplacement d’origine dans l’en-tête du PDF : Client puis Entreprise à gauche, Bureau de Contrôle à droite.
+          <Text style={{ color: colors.textMuted }} className="text-xs mb-4 leading-relaxed">
+            {"Placés à leur emplacement d'origine dans l'en-tête du PDF : Maître d'Ouvrage puis Entreprise à gauche, Bureau de Contrôle à droite."}
           </Text>
 
-          {/* Logo Entreprise (Info) */}
-          <View className="bg-slate-900 rounded-xl p-3.5 mb-3 border border-slate-700">
+          {/* Logo 1: Maître d'Ouvrage */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.cardBorder,
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 12,
+            }}
+          >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 mr-3">
-                <Text className="text-slate-300 text-xs font-bold mb-0.5">Logo Entreprise (Gauche)</Text>
-                <Text className="text-slate-500 text-xs">
-                  {enterpriseLogo ? '✓ Défini dans les Paramètres' : 'Non défini (dans Paramètres)'}
-                </Text>
-              </View>
-              {enterpriseLogo ? (
-                <View className="bg-white rounded-lg p-1">
-                  <Image source={{ uri: enterpriseLogo }} style={{ width: 44, height: 28, resizeMode: 'contain' }} />
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Logo Client / ARRU */}
-          <View className="bg-slate-900 rounded-xl p-3.5 mb-3 border border-slate-700">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-1 mr-3">
-                <Text className="text-slate-300 text-xs font-bold mb-0.5">Logo Client / ARRU (Gauche)</Text>
-                <Text className="text-slate-500 text-xs">
+                <Text style={{ color: colors.text }} className="text-xs font-bold mb-0.5">{"Logo Maître d'Ouvrage (Gauche 1)"}</Text>
+                <Text style={{ color: colors.textDim }} className="text-xs">
                   {logoClient ? '✓ Logo ajouté' : 'Optionnel'}
                 </Text>
               </View>
@@ -468,7 +532,7 @@ export default function PreviewScreen() {
                       isIconOnly
                       onPress={() => setLogos({ logoClient: null })}
                     >
-                      <Text className="text-red-400 font-bold text-xs">✕</Text>
+                      <Text style={{ color: colors.danger }} className="font-bold text-xs">✕</Text>
                     </Button>
                   </>
                 ) : (
@@ -477,19 +541,73 @@ export default function PreviewScreen() {
                     size="sm"
                     onPress={() => handlePickLogo('client')}
                   >
-                    <Button.Label className="font-bold text-xs">+ Choisir</Button.Label>
+                    <Button.Label style={{ color: colors.text }} className="font-bold text-xs">+ Choisir</Button.Label>
                   </Button>
                 )}
               </View>
             </View>
           </View>
 
-          {/* Logo Bureau de Contrôle / SOIT */}
-          <View className="bg-slate-900 rounded-xl p-3.5 border border-slate-700">
+          {/* Logo 2: Entreprise */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.cardBorder,
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 12,
+            }}
+          >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 mr-3">
-                <Text className="text-slate-300 text-xs font-bold mb-0.5">Logo Bureau de Contrôle (Droite)</Text>
-                <Text className="text-slate-500 text-xs">
+                <Text style={{ color: colors.text }} className="text-xs font-bold mb-0.5">Logo Entreprise (Gauche 2)</Text>
+                <Text style={{ color: colors.textDim }} className="text-xs">
+                  {logoEntreprise ? '✓ Logo ajouté' : 'Optionnel'}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                {logoEntreprise ? (
+                  <>
+                    <View className="bg-white rounded-lg p-1">
+                      <Image source={{ uri: logoEntreprise }} style={{ width: 44, height: 28, resizeMode: 'contain' }} />
+                    </View>
+                    <Button
+                      variant="danger-soft"
+                      size="sm"
+                      isIconOnly
+                      onPress={() => setLogos({ logoEntreprise: null })}
+                    >
+                      <Text style={{ color: colors.danger }} className="font-bold text-xs">✕</Text>
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={() => handlePickLogo('entreprise')}
+                  >
+                    <Button.Label style={{ color: colors.text }} className="font-bold text-xs">+ Choisir</Button.Label>
+                  </Button>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Logo 3: Bureau de Contrôle */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.cardBorder,
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 14,
+            }}
+          >
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 mr-3">
+                <Text style={{ color: colors.text }} className="text-xs font-bold mb-0.5">Logo Bureau de Contrôle (Droite)</Text>
+                <Text style={{ color: colors.textDim }} className="text-xs">
                   {logoBureau ? '✓ Logo ajouté' : 'Optionnel'}
                 </Text>
               </View>
@@ -505,7 +623,7 @@ export default function PreviewScreen() {
                       isIconOnly
                       onPress={() => setLogos({ logoBureau: null })}
                     >
-                      <Text className="text-red-400 font-bold text-xs">✕</Text>
+                      <Text style={{ color: colors.danger }} className="font-bold text-xs">✕</Text>
                     </Button>
                   </>
                 ) : (
@@ -514,7 +632,7 @@ export default function PreviewScreen() {
                     size="sm"
                     onPress={() => handlePickLogo('bureau')}
                   >
-                    <Button.Label className="font-bold text-xs">+ Choisir</Button.Label>
+                    <Button.Label style={{ color: colors.text }} className="font-bold text-xs">+ Choisir</Button.Label>
                   </Button>
                 )}
               </View>
@@ -524,6 +642,22 @@ export default function PreviewScreen() {
 
         {/* ── Action buttons ── */}
         <View className="gap-3 mb-5">
+          {/* Visual In-App PDF Preview */}
+          <Button
+            variant="outline"
+            size="lg"
+            onPress={() => router.push('/pdf-preview')}
+            className="border-emerald-400/60 bg-emerald-400/10"
+          >
+            <Text className="text-xl mr-2">👁️</Text>
+            <Button.Label
+              className="font-bold tracking-wide"
+              style={{ color: isDark ? '#6ee7b7' : '#059669' }}
+            >
+              Voir la fiche (Aperçu PDF A4)
+            </Button.Label>
+          </Button>
+
           {/* Primary 1: Enregistrer dans Mes Chantiers */}
           <Button
             variant="outline"
@@ -532,7 +666,10 @@ export default function PreviewScreen() {
             className="border-amber-400/60 bg-amber-400/10"
           >
             <Text className="text-xl mr-2">💾</Text>
-            <Button.Label className="font-bold tracking-wide text-amber-300">
+            <Button.Label
+              className="font-bold tracking-wide"
+              style={{ color: isDark ? '#fcd34d' : '#d97706' }}
+            >
               Enregistrer dans Mes Chantiers
             </Button.Label>
           </Button>
@@ -565,7 +702,7 @@ export default function PreviewScreen() {
             onPress={handlePrint}
           >
             <Text className="text-xl mr-2">🖨️</Text>
-            <Button.Label className="font-bold">Imprimer directement</Button.Label>
+            <Button.Label style={{ color: colors.text }} className="font-bold">Imprimer directement</Button.Label>
           </Button>
 
           {/* Secondary: CSV Export */}
@@ -576,20 +713,20 @@ export default function PreviewScreen() {
             onPress={handleExportCSV}
           >
             <Text className="text-xl mr-2">📊</Text>
-            <Button.Label className="font-bold">Exporter CSV (Excel)</Button.Label>
+            <Button.Label style={{ color: colors.text }} className="font-bold">Exporter CSV (Excel)</Button.Label>
           </Button>
         </View>
 
         {/* ── Nav row ── */}
         <View className="flex-row justify-between items-center pt-2">
           <Button variant="ghost" size="md" onPress={() => router.back()}>
-            <Button.Label className="font-bold text-slate-400">
+            <Button.Label style={{ color: colors.textMuted }} className="font-bold">
               ← Revenir aux Profils
             </Button.Label>
           </Button>
 
           <Button variant="danger-soft" size="md" onPress={handleReset}>
-            <Button.Label className="font-bold">Nouveau Chantier ⟳</Button.Label>
+            <Button.Label style={{ color: colors.danger }} className="font-bold">Nouveau Chantier ⟳</Button.Label>
           </Button>
         </View>
       </ScrollView>

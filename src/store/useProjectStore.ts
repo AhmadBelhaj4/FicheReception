@@ -5,7 +5,7 @@ import { ProjectState, ProfileData } from '../types';
 import { zustandStorage } from './storage';
 import { toLocalISODate } from '../utils/date';
 import { DEFAULT_INSTITUTION } from '../utils/fichePdf';
-import { DEFAULT_LOGO_ARRU, DEFAULT_LOGO_SOIT } from '../assets/defaultLogos';
+import { DEFAULT_LOGO_ARRU, DEFAULT_LOGO_SAMED, DEFAULT_LOGO_SOIT } from '../assets/defaultLogos';
 
 const createInitialState = () => ({
   receptionNumber: '',
@@ -19,6 +19,7 @@ const createInitialState = () => ({
   pc: null as number | null,
   profiles: [] as ProfileData[],
   logoClient: DEFAULT_LOGO_ARRU as string | null,
+  logoEntreprise: DEFAULT_LOGO_SAMED as string | null,
   logoBureau: DEFAULT_LOGO_SOIT as string | null,
 });
 
@@ -94,6 +95,7 @@ export const useProjectStore = create<ProjectState>()(
             ? rest.institutionLines
             : [...DEFAULT_INSTITUTION],
           logoClient: rest.logoClient ?? DEFAULT_LOGO_ARRU,
+          logoEntreprise: rest.logoEntreprise ?? DEFAULT_LOGO_SAMED,
           logoBureau: rest.logoBureau ?? DEFAULT_LOGO_SOIT,
         } as unknown as ProjectState;
       },
@@ -109,6 +111,7 @@ export const useProjectStore = create<ProjectState>()(
         pc: state.pc,
         profiles: state.profiles,
         logoClient: state.logoClient,
+        logoEntreprise: state.logoEntreprise,
         logoBureau: state.logoBureau,
       }),
     }

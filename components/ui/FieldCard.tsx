@@ -1,18 +1,26 @@
 import React from 'react';
 import { View, ViewProps } from 'react-native';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 
 interface FieldCardProps extends ViewProps {
   children: React.ReactNode;
 }
 
-/**
- * Dark-surface card used to group form fields on a step screen.
- * Provides consistent padding, rounded corners, and a subtle border.
- */
-export function FieldCard({ children, ...rest }: FieldCardProps) {
+export function FieldCard({ children, style, ...rest }: FieldCardProps) {
+  const { colors } = useAppTheme();
   return (
     <View
-      className="bg-slate-800 rounded-2xl p-5 mb-5 border border-slate-700"
+      style={[
+        {
+          backgroundColor: colors.card,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 20,
+          borderWidth: 1,
+          borderColor: colors.cardBorder,
+        },
+        style,
+      ]}
       {...rest}
     >
       {children}

@@ -5,9 +5,10 @@ import { HeroUINativeProvider } from "heroui-native";
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import 'react-native-reanimated';
+import { Uniwind } from 'uniwind';
 import "../global.css";
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { useAppTheme } from '../src/hooks/useAppTheme';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -44,25 +45,31 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const { isDark, colors } = useAppTheme();
 
+  useEffect(() => {
+    Uniwind.setTheme(isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <HeroUINativeProvider>
         <ThemeProvider
-          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+          value={isDark ? DarkTheme : DefaultTheme}
         >
           <Stack
             screenOptions={{
               headerStyle: {
-                backgroundColor: "#0f172a",
+                backgroundColor: colors.bg,
               },
-              headerTintColor: "#f8fafc",
+              headerTintColor: colors.text,
               headerTitleStyle: {
                 fontWeight: "bold",
               },
               headerShadowVisible: false,
+              contentStyle: {
+                backgroundColor: colors.bg,
+              },
             }}
           >
             <Stack.Screen
@@ -95,6 +102,12 @@ function RootLayoutNav() {
               options={{
                 title: "Aperçu & Export PDF",
                 headerBackTitle: "Retour",
+              }}
+            />
+            <Stack.Screen
+              name="pdf-preview"
+              options={{
+                headerShown: false,
               }}
             />
             <Stack.Screen
