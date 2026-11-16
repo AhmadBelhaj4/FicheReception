@@ -2,12 +2,13 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { HeroUINativeProvider } from "heroui-native";
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import 'react-native-reanimated';
 import { Uniwind } from 'uniwind';
 import "../global.css";
 
+import IntroSplash from '../components/IntroSplash';
 import { useAppTheme } from '../src/hooks/useAppTheme';
 
 export {
@@ -46,6 +47,8 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const { isDark, colors } = useAppTheme();
+  const [showIntro, setShowIntro] = useState(true);
+  const hideIntro = useCallback(() => setShowIntro(false), []);
 
   useEffect(() => {
     Uniwind.setTheme(isDark ? 'dark' : 'light');
@@ -125,6 +128,7 @@ function RootLayoutNav() {
               }}
             />
           </Stack>
+          {showIntro && <IntroSplash onDone={hideIntro} />}
         </ThemeProvider>
       </HeroUINativeProvider>
     </GestureHandlerRootView>
