@@ -33,6 +33,40 @@ function getStatusStyle(status: ProjectStatus, isDark: boolean): { bg: string; t
   }
 }
 
+const handleExportSingleProject = async (proj: SavedProject) => {
+  try {
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      projects: [proj],
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const safeName = proj.name.replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+    const fileName = `chantier-${safeName}-${Date.now()}.json`;
+    const destUri = `${FileSystem.documentDirectory}${fileName}`;
+
+    await FileSystem.writeAsStringAsync(destUri, json, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    const available = await Sharing.isAvailableAsync();
+    if (available) {
+      await Sharing.shareAsync(destUri, {
+        mimeType: 'application/json',
+        dialogTitle: `Exporter : ${proj.name}`,
+        UTI: 'public.json',
+      });
+    } else {
+      Alert.alert(
+        'Chantier exporté ✓',
+        `Fichier enregistré dans :\n${destUri}`
+      );
+    }
+  } catch (e) {
+    Alert.alert('Erreur', "Échec de l'export : " + String(e));
+  }
+};
+
 export default function ProjectsScreen() {
   const router = useRouter();
   const {
@@ -212,40 +246,6 @@ export default function ProjectsScreen() {
     }
   };
 
-  const handleExportSingleProject = async (proj: SavedProject) => {
-    try {
-      const backup = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        projects: [proj],
-      };
-      const json = JSON.stringify(backup, null, 2);
-      const safeName = proj.name.replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
-      const fileName = `chantier-${safeName}-${Date.now()}.json`;
-      const destUri = `${FileSystem.documentDirectory}${fileName}`;
-
-      await FileSystem.writeAsStringAsync(destUri, json, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-
-      const available = await Sharing.isAvailableAsync();
-      if (available) {
-        await Sharing.shareAsync(destUri, {
-          mimeType: 'application/json',
-          dialogTitle: `Exporter : ${proj.name}`,
-          UTI: 'public.json',
-        });
-      } else {
-        Alert.alert(
-          'Chantier exporté ✓',
-          `Fichier enregistré dans :\n${destUri}`
-        );
-      }
-    } catch (e) {
-      Alert.alert('Erreur', "Échec de l'export : " + String(e));
-    }
-  };
-
   const renderItem = ({ item }: { item: SavedProject }) => {
     const statusColor = getStatusStyle(item.status, isDark);
     return (
@@ -300,14 +300,6 @@ export default function ProjectsScreen() {
           <Button
             variant="outline"
             size="sm"
-            onPress={() => handleOpenProject(item)}
-            className="flex-1"
-          >
-            <Button.Label style={{ color: colors.text }} className="font-bold text-xs">Ouvrir</Button.Label>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             isIconOnly
             onPress={() => handleExportSingleProject(item)}
           >
@@ -316,6 +308,7 @@ export default function ProjectsScreen() {
           <Button
             variant="outline"
             size="sm"
+            className="flex-1"
             onPress={() => {
               setRenameTarget(item);
               setRenameText(item.name);
@@ -328,6 +321,7 @@ export default function ProjectsScreen() {
             <Button
               variant="outline"
               size="sm"
+              className="flex-1"
               onPress={() => updateProjectStatus(item.id, 'En cours')}
             >
               <Button.Label className="font-bold text-xs" style={{ color: colors.success }}>
@@ -338,6 +332,7 @@ export default function ProjectsScreen() {
             <Button
               variant="outline"
               size="sm"
+              className="flex-1"
               onPress={() =>
                 Alert.alert(
                   'Archiver ce chantier ?',
