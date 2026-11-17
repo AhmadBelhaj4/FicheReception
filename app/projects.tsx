@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   Alert,
   Modal,
+  Platform,
   SectionList,
   Text,
   TextInput,
@@ -134,6 +135,52 @@ export default function ProjectsScreen() {
       }
     } catch (e) {
       Alert.alert('Erreur', "Échec de l'export : " + String(e));
+    }
+  };
+
+  const handleSaveLocally = async () => {
+    try {
+      const backup = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        projects,
+      };
+      const json = JSON.stringify(backup, null, 2);
+      const fileName = `fiche-reception-backup-${Date.now()}.json`;
+
+      if (Platform.OS === 'android') {
+        // SAF: ask user to pick a destination folder
+        const permissions =
+          await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (!permissions.granted) {
+          Alert.alert('Permission refusée', 'Accès au stockage refusé.');
+          return;
+        }
+        const uri = await FileSystem.StorageAccessFramework.createFileAsync(
+          permissions.directoryUri,
+          fileName,
+          'application/json'
+        );
+        await FileSystem.writeAsStringAsync(uri, json, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+        Alert.alert(
+          'Sauvegarde enregistrée ✓',
+          'Fichier JSON enregistré dans le dossier que vous avez choisi.'
+        );
+      } else {
+        // iOS: documentDirectory is accessible from the Files app
+        const dest = `${FileSystem.documentDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(dest, json, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+        Alert.alert(
+          'Sauvegarde enregistrée ✓',
+          `Fichier enregistré. Ouvrez l'app Fichiers pour le retrouver.`
+        );
+      }
+    } catch (e) {
+      Alert.alert('Erreur', 'Impossible de sauvegarder localement : ' + String(e));
     }
   };
 
@@ -363,23 +410,35 @@ export default function ProjectsScreen() {
       </View>
 
       {/* Backup / restore */}
-      <View className="flex-row gap-2 px-5 pb-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onPress={handleExportBackup}
-          className="flex-1"
-        >
-          <Text className="text-sm mr-1">📤</Text>
-          <Button.Label style={{ color: colors.text }} className="font-bold text-xs">
-            Exporter la sauvegarde
-          </Button.Label>
-        </Button>
+      <View className="px-5 pb-3 gap-2">
+        <View className="flex-row gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={handleExportBackup}
+            className="flex-1"
+          >
+            <Text className="text-sm mr-1">📤</Text>
+            <Button.Label style={{ color: colors.text }} className="font-bold text-xs">
+              Exporter la sauvegarde
+            </Button.Label>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={handleSaveLocally}
+            className="flex-1"
+          >
+            <Text className="text-sm mr-1">💾</Text>
+            <Button.Label style={{ color: colors.text }} className="font-bold text-xs">
+              Enregistrer local
+            </Button.Label>
+          </Button>
+        </View>
         <Button
           variant="outline"
           size="sm"
           onPress={handleImportBackup}
-          className="flex-1"
         >
           <Text className="text-sm mr-1">📥</Text>
           <Button.Label style={{ color: colors.text }} className="font-bold text-xs">
