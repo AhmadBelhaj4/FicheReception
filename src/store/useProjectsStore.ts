@@ -33,9 +33,9 @@ export const useProjectsStore = create<ProjectsState>()(
           lectureArriere: null,
           pc: null,
           profiles: [],
-          logoClient: DEFAULT_LOGO_ARRU,
-          logoEntreprise: DEFAULT_LOGO_SAMED,
-          logoBureau: DEFAULT_LOGO_SOIT,
+          logoClient: null,
+          logoEntreprise: null,
+          logoBureau: null,
         };
         set((state) => ({
           projects: [newProject, ...state.projects],
@@ -153,8 +153,21 @@ export const useProjectsStore = create<ProjectsState>()(
     {
       name: 'fiche-reception-projects',
       storage: createJSONStorage(() => zustandStorage),
-      version: 1, // saved projects: missing `institutionLines` is handled at load time
-      migrate: (persistedState: unknown, _version: number) => persistedState as ProjectsState,
+      version: 2, // v2: clear old pre-filled default logos from existing projects
+      migrate: (persistedState: unknown, _version: number) => {
+        const s = (persistedState ?? {}) as Partial<ProjectsState>;
+        const clearIfDefault = (val: unknown, def: string) =>
+          val === def ? null : (val as string | null) ?? null;
+        return {
+          ...s,
+          projects: (s.projects || []).map((p) => ({
+            ...p,
+            logoClient: clearIfDefault(p.logoClient, DEFAULT_LOGO_ARRU),
+            logoEntreprise: clearIfDefault(p.logoEntreprise, DEFAULT_LOGO_SAMED),
+            logoBureau: clearIfDefault(p.logoBureau, DEFAULT_LOGO_SOIT),
+          })),
+        } as ProjectsState;
+      },
       partialize: (state) => ({
         projects: state.projects,
         activeProjectId: state.activeProjectId,

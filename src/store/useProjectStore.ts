@@ -18,9 +18,9 @@ const createInitialState = () => ({
   lectureArriere: null as number | null,
   pc: null as number | null,
   profiles: [] as ProfileData[],
-  logoClient: DEFAULT_LOGO_ARRU as string | null,
-  logoEntreprise: DEFAULT_LOGO_SAMED as string | null,
-  logoBureau: DEFAULT_LOGO_SOIT as string | null,
+  logoClient: null as string | null,
+  logoEntreprise: null as string | null,
+  logoBureau: null as string | null,
 });
 
 export const useProjectStore = create<ProjectState>()(
@@ -84,19 +84,20 @@ export const useProjectStore = create<ProjectState>()(
     {
       name: 'fiche-reception-project',
       storage: createJSONStorage(() => zustandStorage),
-      version: 2,
-      // v2: `pNumber` removed (page numbers are automatic), `institutionLines` added,
-      // original ENNOUR logos pre-filled when none was chosen.
+      version: 3,
+      // v3: logos are empty (null) by default. Clear old pre-filled default logos.
       migrate: (persistedState: unknown, _version: number) => {
         const { pNumber: _drop, ...rest } = (persistedState ?? {}) as Record<string, unknown>;
+        const clearIfDefault = (val: unknown, def: string) =>
+          val === def ? null : (val as string | null) ?? null;
         return {
           ...rest,
           institutionLines: Array.isArray(rest.institutionLines)
             ? rest.institutionLines
             : [...DEFAULT_INSTITUTION],
-          logoClient: rest.logoClient ?? DEFAULT_LOGO_ARRU,
-          logoEntreprise: rest.logoEntreprise ?? DEFAULT_LOGO_SAMED,
-          logoBureau: rest.logoBureau ?? DEFAULT_LOGO_SOIT,
+          logoClient: clearIfDefault(rest.logoClient, DEFAULT_LOGO_ARRU),
+          logoEntreprise: clearIfDefault(rest.logoEntreprise, DEFAULT_LOGO_SAMED),
+          logoBureau: clearIfDefault(rest.logoBureau, DEFAULT_LOGO_SOIT),
         } as unknown as ProjectState;
       },
       partialize: (state) => ({

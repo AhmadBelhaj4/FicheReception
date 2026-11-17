@@ -91,8 +91,8 @@ export default function PdfPreviewScreen() {
         logos: { client: logoClient, enterprise: logoEntreprise, bureau: logoBureau },
       },
       { fontCss: FICHE_FONT_CSS, metrics: FICHE_METRICS },
-      // In WebView, standard px scaling renders crisply
-      { unit: 'px' }
+      // In WebView, standard px scaling renders crisply; isPreview displays logo placeholders when empty
+      { unit: 'px', isPreview: true }
     );
     return doc.html;
   }, [

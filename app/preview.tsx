@@ -150,7 +150,7 @@ export default function PreviewScreen() {
         logos: { client: logoClient, enterprise: logoEntreprise, bureau: logoBureau },
       },
       { fontCss: FICHE_FONT_CSS, metrics: FICHE_METRICS },
-      { unit: Platform.OS === 'ios' ? 'px' : 'pt' }
+      { unit: Platform.OS === 'ios' ? 'px' : 'pt', isPreview: false }
     );
   };
 

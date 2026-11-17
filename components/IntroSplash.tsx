@@ -1,14 +1,23 @@
 // components/IntroSplash.tsx
 // Cinematic in-app loading screen, shown once per cold start right after the native splash.
-// Full-screen photo + app name. Tap anywhere to skip. No new dependencies.
+// Full-screen picture + centered app name and tagline. Tap anywhere to skip. No new dependencies.
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const HERO = require('../assets/images/intro-cinematic.jpg');
 const SHOW_MS = 2000;
+
+// Explicit full-screen style (StyleSheet.absoluteFillObject was removed in recent React Native).
+const FILL = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+} as const;
 
 type Props = {
   /** Called after SHOW_MS or when the user taps. Must be a stable function (useCallback). */
@@ -17,6 +26,9 @@ type Props = {
 
 export default function IntroSplash({ onDone }: Props) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  // Text block sits about 12% up from the bottom edge, never under the system bar.
+  const bottomPad = Math.max(insets.bottom + 24, height * 0.12);
 
   useEffect(() => {
     const timer = setTimeout(onDone, SHOW_MS);
@@ -31,17 +43,15 @@ export default function IntroSplash({ onDone }: Props) {
     >
       <StatusBar style="light" />
       <Pressable
-        style={StyleSheet.absoluteFill}
+        style={FILL}
         onPress={onDone}
         accessibilityRole="button"
         accessibilityLabel="Passer l'introduction"
       >
         <Image source={HERO} style={styles.image} />
-        <View style={styles.scrim} />
-        <View style={[styles.content, { paddingBottom: insets.bottom + 48 }]}>
-          <View style={styles.rule} />
+        <View style={[styles.content, { paddingBottom: bottomPad }]}>
           <Text style={styles.title}>Fiche Topo</Text>
-          <Text style={styles.subtitle}>Réception topographique · Nivellement</Text>
+          <Text style={styles.subtitle}>RÉCEPTION & CONTRÔLE TOPOGRAPHIQUE</Text>
         </View>
       </Pressable>
     </Animated.View>
@@ -50,39 +60,37 @@ export default function IntroSplash({ onDone }: Props) {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...FILL,
     backgroundColor: '#0f172a',
     zIndex: 10,
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
+    // Absolute + explicit size: a bundled image otherwise keeps its pixel size,
+    // and without absolute it would push the text out of the screen.
+    ...FILL,
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
   },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-  },
   content: {
-    flex: 1,
+    ...FILL,
     justifyContent: 'flex-end',
-    paddingHorizontal: 32,
-  },
-  rule: {
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#f59e0b',
-    marginBottom: 14,
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
   title: {
     color: '#f8fafc',
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '800',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   subtitle: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    marginTop: 6,
+    color: '#f59e0b',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginTop: 10,
+    textAlign: 'center',
   },
 });

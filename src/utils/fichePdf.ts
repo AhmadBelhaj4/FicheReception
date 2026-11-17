@@ -66,6 +66,12 @@ export interface FicheOptions {
    * iOS (WKWebView) lays pages out at 1 CSS px = 1 pt: 'px'.
    */
   unit?: 'pt' | 'px';
+  /**
+   * Whether rendering in the on-screen preview.
+   * When true, missing logos render placeholder text/boxes.
+   * When false (or omitted), missing logos render nothing (blank space for print).
+   */
+  isPreview?: boolean;
 }
 
 // ─── Geometry measured on the original ───────────────────────────────────────
@@ -233,7 +239,8 @@ function renderPage(
   pageCount: number,
   slice: FicheProfileModel[],
   firstNumber: number,
-  u: (n: number) => string
+  u: (n: number) => string,
+  options: FicheOptions = {}
 ): string {
   const m = assets.metrics;
   const fills: string[] = [];
@@ -252,11 +259,16 @@ function renderPage(
   const cell = (x0: number, y0: number, x1: number, y1: number, t = RULE) => {
     hl(x0, x1, y0, t); hl(x0, x1, y1, t); vl(x0, y0, y1, t); vl(x1, y0, y1, t);
   };
-  const logo = (src: string | null | undefined, x: number, y: number, w: number, h: number) => {
-    if (!src) return;
-    imgs.push(
-      `<img src="${esc(src)}" alt="" style="left:${u(x)};top:${u(y)};width:${u(w)};height:${u(h)}">`
-    );
+  const logo = (src: string | null | undefined, x: number, y: number, w: number, h: number, placeholderText?: string) => {
+    if (src) {
+      imgs.push(
+        `<img src="${esc(src)}" alt="" style="left:${u(x)};top:${u(y)};width:${u(w)};height:${u(h)};object-fit:contain">`
+      );
+    } else if (options.isPreview && placeholderText) {
+      texts.push(
+        `<div class="t" style="left:${u(x)};top:${u(y)};width:${u(w)};height:${u(h)};display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;white-space:normal;border:1px dashed #94a3b8;border-radius:${u(3)};font-size:${u(6.5)};color:#64748b;font-family:'FicheSans',Calibri,sans-serif;padding:${u(2)};box-sizing:border-box;line-height:1.15"><span>${placeholderText}</span></div>`
+      );
+    }
   };
   const txt = (x0: number, y0: number, x1: number, y1: number, html: string, o: TxtOpts) => {
     const font = o.font ?? 'FicheSerif';
@@ -285,9 +297,9 @@ function renderPage(
   // ── Top header (Logos, Institutional box, Title) ── only on first page
   if (pageNo === 1) {
     // ── Logos (original slots: client 39.4², enterprise 80.7×46.1, bureau 72²) ──
-    logo(input.logos.client, 31.8, 28.3, 39.4, 39.4);
-    logo(input.logos.enterprise, 71.2, 26.6, 80.7, 46.1);
-    logo(input.logos.bureau, 490.9, 10.4, 72.0, 72.0);
+    logo(input.logos.client, 31.8, 28.3, 39.4, 39.4, "Logo Maître d'Ouvrage");
+    logo(input.logos.enterprise, 71.2, 26.6, 80.7, 46.1, "Logo Entreprise");
+    logo(input.logos.bureau, 490.9, 10.4, 72.0, 72.0, "Logo Bureau de Contrôle");
 
     // ── Institutional double box ──
     rect(151.05, 11.85, 464.35, 43.0, '#fff');
@@ -515,7 +527,7 @@ export function buildFicheHtml(
   const pages: string[] = [];
   for (let i = 0; i < pageCount; i++) {
     const slice = input.profiles.slice(i * PROFILES_PER_PAGE, (i + 1) * PROFILES_PER_PAGE);
-    pages.push(renderPage(input, assets, i + 1, pageCount, slice, i * PROFILES_PER_PAGE + 1, u));
+    pages.push(renderPage(input, assets, i + 1, pageCount, slice, i * PROFILES_PER_PAGE + 1, u, options));
   }
 
   const html = `<!DOCTYPE html>
